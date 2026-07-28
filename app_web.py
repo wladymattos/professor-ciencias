@@ -99,10 +99,12 @@ if pergunta := st.chat_input("Pergunte algo sobre a nossa aula (ex: Por que o c√
             )
             
             response = ai_client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=pergunta,
-                config=config_ia
-            )
+    model="gemini-3.6-flash",  # <--- ATUALIZADO PARA O MODELO VIGENTE
+    contents=pergunta,
+    config=config_ia
+)
+
+            
             
             resposta_final = response.text
             st.markdown(resposta_final)
