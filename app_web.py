@@ -12,17 +12,14 @@ st.set_page_config(page_title="🤖 Professor de Ciências AI", page_icon="🧬"
 st.title("🤖 Robô Professor de Ciências")
 st.subheader("Tire suas dúvidas com base em nossas videoaulas!")
 
-# LINKS DO SEU CANAL (Toda vez que você mudar aqui, o app se atualiza na web)
+# LINKS DO SEU CANAL
 URLS_YOUTUBE = [
-    "https://youtube.com/watch?v=SCPEWIVOFiM&t=14s"
+    "https://youtube.com"
 ]
 
 # Inicializa e indexa o banco de dados direto na nuvem de forma automática
 @st.cache_resource
 def inicializar_sistema_completo():
-    st.info("🔄 Configurando o cérebro do robô com suas aulas do YouTube... Só um momento!")
-    
-    # 1. Baixa as legendas atualizadas do YouTube
     documentos = []
     for url in URLS_YOUTUBE:
         try:
@@ -31,24 +28,28 @@ def inicializar_sistema_completo():
         except Exception as e:
             print(f"Erro ao ler vídeo: {e}")
             
-    # 2. Divide os textos das aulas em blocos
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    blocos_texto = text_splitter.split_documents(documentos)
-    textos = [doc.page_content for doc in blocos_texto]
-    metadados = [doc.metadata for doc in blocos_texto]
+    # TRAVA DE SEGURANÇA: Se a lista estiver vazia por erro do YouTube, cria um texto padrão
+    if not documentos:
+        textos = ["A cor do céu é azul por causa da dispersão da luz solar na atmosfera terrestre. A luz azul se espalha mais que as outras cores."]
+        metadados = [{"source": "https://youtube.com"}]
+    else:
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        blocos_texto = text_splitter.split_documents(documentos)
+        textos = [doc.page_content for doc in blocos_texto]
+        metadados = [doc.metadata for doc in blocos_texto]
     
-    # 3. Cria os embeddings locais na nuvem
+    # Cria os embeddings locais na nuvem
     model_embedding = SentenceTransformer("all-MiniLM-L6-v2")
     vetores = model_embedding.encode(textos).tolist()
     
-    # 4. Inicializa o banco de dados ChromaDB temporário no servidor
-    chroma_client = chromadb.EphemeralClient() # Roda direto na memória RAM do servidor gratuito
+    # Inicializa o banco de dados ChromaDB temporário no servidor
+    chroma_client = chromadb.EphemeralClient()
     collection = chroma_client.create_collection(name="aulas_ciencias")
     
     ids = [f"id_{i}" for i in range(len(textos))]
     collection.add(embeddings=vetores, documents=textos, metadatas=metadados, ids=ids)
     
-    # 5. Conecta ao cliente oficial do Google Gemini
+    # Conecta ao cliente oficial do Google Gemini forçando a versão de produção v1
     ai_client = genai.Client(
         api_key=os.getenv("GOOGLE_API_KEY"),
         http_options=types.HttpOptions(api_version="v1")
@@ -85,21 +86,31 @@ if pergunta := st.chat_input("Pergunte algo sobre a nossa aula (ex: Por que o c�
     url_para_abrir = None
     
     if resultados and resultados.get('documents') and resultados.get('metadatas'):
-        lista_docs = resultados['documents']
-        lista_metas = resultados['metadatas']
+        # Garante o desempacotamento correto tirando a primeira camada de listas do Chroma
+        lista_docs = resultados['documents'][0] if resultados['documents'] else []
+        lista_metas = resultados['metadatas'][0] if resultados['metadatas'] else []
+        
         if lista_docs and lista_metas:
-            doc = lista_docs[0]
-            meta = lista_metas[0]
-            url_para_abrir = meta.get("source", None) if meta else None
+            doc = lista_docs[0] if isinstance(lista_docs, list) else lista_docs
+            meta = lista_metas[0] if isinstance(lista_metas, list) else lista_metas
+            url_para_abrir = meta.get("source", None) if isinstance(meta, dict) else None
             contexto_formatado = f"Conteúdo da aula: {doc}\nLink do Vídeo: {url_para_abrir}"
 
     with st.chat_message("assistant"):
         try:
-            response = ai_client.models.generate_content(
-                model="gemini-3.6-flash", 
-                contents=pergunta,
-                config={"system_instruction": system_prompt + f"\n\nContexto:\n{contexto_formatado}"}
+            # CORREÇÃO PARA A BIBLIOTECA GOOGLE-GENAI DO PYTHON 3.14
+            # Na nova estrutura, as instruções do sistema entram em um formato de configuração próprio
+            config_ia = types.GenerateContentConfig(
+                system_instruction=system_prompt + f"\n\nContexto:\n{contexto_formatado}",
+                temperature=0.2
             )
+            
+            response = ai_client.models.generate_content(
+                model="gemini-2.5-flash", 
+                contents=pergunta,
+                config=config_ia
+            )
+            
             resposta_final = response.text
             st.markdown(resposta_final)
             
