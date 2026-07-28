@@ -41,7 +41,7 @@ def inicializar_sistema_completo():
     
     # Inicializa o cliente do Gemini
     chave_api = os.getenv("GOOGLE_API_KEY")
-    if not_chave_api and "GOOGLE_API_KEY" in st.secrets:
+    if not chave_api and "GOOGLE_API_KEY" in st.secrets:
         chave_api = st.secrets["GOOGLE_API_KEY"]
         
     if not_chave_api:
