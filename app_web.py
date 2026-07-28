@@ -1,6 +1,7 @@
 import os
 import streamlit as st
 import numpy as np
+import base64  # CORREÇÃO: Importação essencial adicionada aqui
 from sentence_transformers import SentenceTransformer
 from google import genai
 from google.genai import types
