@@ -52,10 +52,7 @@ def inicializar_sistema_completo():
         st.stop()
     
     # Conecta ao cliente oficial do Google Gemini
-    ai_client = genai.Client(
-        api_key=chave_api,
-        http_options=types.HttpOptions(api_version="v1")
-    )
+    ai_client = genai.Client(api_key=chave_api)
     
     return model_embedding, textos, metadados, matriz_vetores, ai_client
 
@@ -102,7 +99,7 @@ if pergunta := st.chat_input("Pergunte algo sobre a nossa aula (ex: Por que o c√
             )
             
             response = ai_client.models.generate_content(
-                model="gemini-1.5-flash",
+                model="gemini-2.5-flash",
                 contents=pergunta,
                 config=config_ia
             )
