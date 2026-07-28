@@ -17,7 +17,7 @@ URLS_YOUTUBE = [
     "https://youtube.com"
 ]
 
-# Inicializa e indexa o banco de dados direto na nuvem usando Numpy puro (Sem Bugs de Rust)
+# Inicializa e indexa o banco de dados direto na nuvem usando Numpy puro
 @st.cache_resource
 def inicializar_sistema_completo():
     documentos = []
@@ -42,9 +42,18 @@ def inicializar_sistema_completo():
     model_embedding = SentenceTransformer("all-MiniLM-L6-v2")
     matriz_vetores = model_embedding.encode(textos, convert_to_numpy=True)
     
+    # CORREÇÃO: Tenta capturar a chave tanto do ambiente global quanto dos segredos do Streamlit
+    chave_api = os.getenv("GOOGLE_API_KEY")
+    if not chave_api and "GOOGLE_API_KEY" in st.secrets:
+        chave_api = st.secrets["GOOGLE_API_KEY"]
+        
+    if not chave_api:
+        st.error("⚠️ Chave GOOGLE_API_KEY não foi encontrada nas configurações do Streamlit Cloud!")
+        st.stop()
+    
     # Conecta ao cliente oficial do Google Gemini
     ai_client = genai.Client(
-        api_key=os.getenv("GOOGLE_API_KEY"),
+        api_key=chave_api,
         http_options=types.HttpOptions(api_version="v1")
     )
     
@@ -71,12 +80,12 @@ if pergunta := st.chat_input("Pergunte algo sobre a nossa aula (ex: Por que o c�
         st.markdown(pergunta)
     st.session_state.messages.append({"role": "user", "content": pergunta})
 
-    # 1. Busca Semântica Matemática (Simula o ChromaDB de forma imune a bugs)
+    # 1. Busca Semântica Matemática
     vetor_pergunta = model_embedding.encode([pergunta], convert_to_numpy=True)
     
-    # Calcula a similaridade de cosseno (produto escalar de matrizes normalizadas)
+    # Calcula a similaridade de cosseno
     scores = np.dot(matriz_vetores, vetor_pergunta.T).flatten()
-    melhor_indice = int(np.argmax(scores)) # Encontra o bloco mais parecido de todos
+    melhor_indice = int(np.argmax(scores))
     
     # Extrai o documento e link correspondente
     texto_encontrado = lista_textos[melhor_indice]
@@ -93,7 +102,7 @@ if pergunta := st.chat_input("Pergunte algo sobre a nossa aula (ex: Por que o c�
             )
             
             response = ai_client.models.generate_content(
-                model="gemini-2.5-flash", # Modelo estável e ativo em produção v1
+                model="gemini-2.5-flash",
                 contents=pergunta,
                 config=config_ia
             )
