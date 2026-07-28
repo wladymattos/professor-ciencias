@@ -14,7 +14,9 @@ st.subheader("Tire suas dúvidas com base em nossas videoaulas!")
 
 # LINKS DO SEU CANAL
 URLS_YOUTUBE = [
-    "https://youtube.com"
+    "https://www.youtube.com/watch?v=SCPEWIVOFiM&t=14s",
+    "https://www.youtube.com/watch?v=8Ukjkh3gadQ&t=34s",
+    "https://www.youtube.com/watch?v=lw9nPJH2X8c&t=4s"
 ]
 
 # Inicializa e indexa o banco de dados direto na nuvem usando Numpy puro
