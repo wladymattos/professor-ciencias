@@ -44,7 +44,8 @@ def inicializar_sistema_completo():
     if not chave_api and "GOOGLE_API_KEY" in st.secrets:
         chave_api = st.secrets["GOOGLE_API_KEY"]
         
-    if not_chave_api:
+    # CORREÇÃO DEFINITIVA DA DIGITAÇÃO NAS DUAS LINHAS (Uso correto do 'not')
+    if not chave_api:
         st.error("⚠️ Chave GOOGLE_API_KEY não configurada nos Secrets!")
         st.stop()
         
@@ -104,7 +105,7 @@ if pergunta := st.chat_input("Pergunte algo sobre a nossa aula (ex: Como funcion
             resposta_final = response.text
             st.markdown(resposta_final)
             
-            # CORREÇÃO DO PLAYER: Exibe o player embutido E o link direto azul clicável
+            # Exibe o player embutido E o link direto azul clicável
             if url_para_abrir and "youtube.com" in url_para_abrir:
                 st.write(f"🔗 [Clique aqui para abrir o vídeo diretamente no YouTube]({url_para_abrir})")
                 st.video(url_para_abrir)
@@ -114,4 +115,3 @@ if pergunta := st.chat_input("Pergunte algo sobre a nossa aula (ex: Como funcion
             
         except Exception as e:
             st.error(f"Erro ao acionar a IA: {e}")
-
