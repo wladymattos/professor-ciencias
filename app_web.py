@@ -102,7 +102,7 @@ if pergunta := st.chat_input("Pergunte algo sobre a nossa aula (ex: Por que o c√
             )
             
             response = ai_client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-1.5-flash",
                 contents=pergunta,
                 config=config_ia
             )
