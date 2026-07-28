@@ -13,35 +13,49 @@ st.set_page_config(
 )
 
 # ==============================================================================
-# 🎨 DESIGN PREMIUM: Adiciona o Degradê de Fundo e Estiliza os Balões do Chat
+# 🖼️ FUNÇÃO COMPLEMENTAR: CONVERTE A IMAGEM DO GITHUB EM FUNDO SEGURO
 # ==============================================================================
-st.markdown("""
-    <style>
-        /* 🌌 DEFINE O DEGRADÊ DE FUNDO DA TELA INTEIRA */
-        .stApp {
-            background: linear-gradient(135deg, #eef5f3 0%, #dbe7e4 100%) !important;
-            background-attachment: fixed;
-        }
+def get_base64_image(image_path):
+    if os.path.exists(image_path):
+        with open(image_path, "rb") as img_file:
+            return base64.b64encode(img_file.read()).decode()
+    return None
 
-        /* 📌 Se você preferir usar uma IMAGEM de fundo em vez de degradê, 
-           apague as linhas da .stApp acima e use as linhas abaixo:
-        .stApp {
-            background-image: url("https://unsplash.com");
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-        }
-        */
+# Busca a imagem 'fundo.jpg' que você subiu no seu repositório
+img_base64 = get_base64_image("fundo.jpg")
+
+# Se a imagem existir, aplica ela. Se não, aplica o degradê de segurança como plano B.
+if img_base64:
+    css_fundo = f"""
+    .stApp {{
+        background-image: url("data:image/jpg;base64,{img_base64}");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }}
+    """
+else:
+    css_fundo = """
+    .stApp {
+        background: linear-gradient(135deg, #eef5f3 0%, #dbe7e4 100%) !important;
+        background-attachment: fixed;
+    }
+    """
+
+# Injeta os estilos CSS finais na página web
+st.markdown(f"""
+    <style>
+        {css_fundo}
 
         /* Estilização dos títulos */
-        h1, h2, h3 {
+        h1, h2, h3 {{
             color: #1e3d33 !important;
             font-family: 'Helvetica Neue', Arial, sans-serif;
             font-weight: 700;
-        }
+        }}
 
         /* Customização dos botões da barra lateral escura */
-        .stButton>button {
+        .stButton>button {{
             border-radius: 12px !important;
             background-color: #2a5c4d !important;
             color: white !important;
@@ -51,22 +65,22 @@ st.markdown("""
             font-weight: bold !important;
             box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.05);
             transition: all 0.3s ease;
-        }
-        .stButton>button:hover {
+        }}
+        .stButton>button:hover {{
             background-color: #1e3d33 !important;
             transform: translateY(-2px);
             box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.1);
-        }
+        }}
 
-        /* Deixa os balões de conversa levemente transparentes e elegantes */
-        .stChatMessage {
-            background-color: rgba(255, 255, 255, 0.75) !important;
+        /* Deixa os balões de conversa com efeito vidro fosco elegante sobre a imagem */
+        .stChatMessage {{
+            background-color: rgba(255, 255, 255, 0.85) !important;
             border-radius: 15px !important;
             padding: 15px !important;
             margin-bottom: 10px !important;
-            box-shadow: 0px 2px 5px rgba(0,0,0,0.02) !important;
-            backdrop-filter: blur(5px);
-        }
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.05) !important;
+            backdrop-filter: blur(8px);
+        }}
     </style>
 """, unsafe_allow_html=True)
 
