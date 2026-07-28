@@ -23,28 +23,25 @@ AULAS_DO_CANAL = [
         "link": "https://www.youtube.com/watch?v=lw9nPJH2X8c"
     },
     {
-        "texto": "Na aula sobre soluções explicamos o que é uma solução e como ela é formada.",
+        "texto": "Na aula sobre soluções explicamos o que são soluções químcias e como ela são formadas.",
         "link": "https://www.youtube.com/watch?v=QT1osnLDjjA&t=8s"
     }
+
 ]
 # ==============================================================================
 
 @st.cache_resource
 def inicializar_sistema_completo():
-    # Extrai as informações cadastradas manualmente acima
     textos = [aula["texto"] for aula in AULAS_DO_CANAL]
     metadados = [{"source": aula["link"]} for aula in AULAS_DO_CANAL]
     
-    # Cria as matrizes matemáticas de busca semântica local
     model_embedding = SentenceTransformer("all-MiniLM-L6-v2")
     matriz_vetores = model_embedding.encode(textos, convert_to_numpy=True)
     
-    # Inicializa o cliente do Gemini
     chave_api = os.getenv("GOOGLE_API_KEY")
     if not chave_api and "GOOGLE_API_KEY" in st.secrets:
         chave_api = st.secrets["GOOGLE_API_KEY"]
         
-    # CORREÇÃO DEFINITIVA DA DIGITAÇÃO NAS DUAS LINHAS (Uso correto do 'not')
     if not chave_api:
         st.error("⚠️ Chave GOOGLE_API_KEY não configurada nos Secrets!")
         st.stop()
@@ -61,9 +58,21 @@ system_prompt = (
     "Se responder à pergunta usando o contexto, avise ao aluno que um link clicável e o player da aula foram disponibilizados abaixo para ele assistir."
 )
 
+# Inicializa o histórico de mensagens na tela
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# ==============================================================================
+# 🧼 ADIÇÃO: BARRA LATERAL COM BOTÃO PARA LIMPAR O CHAT
+# ==============================================================================
+with st.sidebar:
+    st.header("⚙️ Opções do Chat")
+    if st.button("🧹 Limpar Tela (Nova Pergunta)"):
+        st.session_state.messages = []  # Apaga todas as mensagens da memória
+        st.rerun()  # Recarrega a página com a tela limpa imediatamente
+# ==============================================================================
+
+# Exibe as mensagens armazenadas na sessão
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
@@ -78,7 +87,6 @@ if pergunta := st.chat_input("Pergunte algo sobre a nossa aula (ex: Como funcion
     scores = np.dot(matriz_vetores, vetor_pergunta.T).flatten()
     melhor_indice = int(np.argmax(scores))
     
-    # Só aceita a resposta se a pergunta tiver o mínimo de similaridade com o texto cadastrado
     if scores[melhor_indice] > 0.35:
         texto_encontrado = lista_textos[melhor_indice]
         meta_encontrada = lista_metas[melhor_indice]
@@ -105,7 +113,6 @@ if pergunta := st.chat_input("Pergunte algo sobre a nossa aula (ex: Como funcion
             resposta_final = response.text
             st.markdown(resposta_final)
             
-            # Exibe o player embutido E o link direto azul clicável
             if url_para_abrir and "youtube.com" in url_para_abrir:
                 st.write(f"🔗 [Clique aqui para abrir o vídeo diretamente no YouTube]({url_para_abrir})")
                 st.video(url_para_abrir)
