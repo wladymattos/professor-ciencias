@@ -46,21 +46,28 @@ st.title("🧬 Robô Professor de Ciências")
 st.markdown("---")
 
 # ==============================================================================
-# 🧠 CADASTRE SUAS AULAS AQUI (Texto resumido + Link limpo de compartilhamento)
+# 🧠 CADASTRE SUAS AULAS AQUI (Texto resumido + Link limpo + Título + Sugestão)
 # ==============================================================================
 AULAS_DO_CANAL = [
     {
-        "texto": "Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo.",
-        "link": "https://www.youtube.com/watch?v=SCPEWIVOFiM&t=22s"
+        "titulo": "🌌 O que é química?",
+        "sugestao_pergunta": "Explique o que é química?",
+        "texto": " Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo..",
+        "link": " https://www.youtube.com/watch?v=SCPEWIVOFiM&t=22s "
     },
     {
-        "texto": "Na aula sobre partículas explicamos como são consituídos os átomos e as partículas que formam a matéria.",
-        "link": "https://www.youtube.com/watch?v=lw9nPJH2X8c"
+        "titulo": "🌱 O que são partículas?",
+        "sugestao_pergunta": "Quais são as partículas que formam a matéria?",
+        "texto": "Na aula sobre partículas explicamos como são constituídos os átomos e as partículas que formam a matéria.",
+        "link": " https://www.youtube.com/watch?v=lw9nPJH2X8c "
     },
     {
-        "texto": "Na aula sobre soluções explicamos o que é uma solução e como ela é formada.",
-        "link": "https://www.youtube.com/watch?v=QT1osnLDjjA&t=8s"
+        "titulo": "🪐 Soluções químicas",
+        "sugestao_pergunta": "Como se formam as soluções químicas?",
+        "texto": " Na aula sobre soluções explicamos o que é uma solução e como ela é formada.",
+        "link": " https://www.youtube.com/watch?v=QT1osnLDjjA&t=8s "
     }
+
 ]
 # ==============================================================================
 
@@ -96,14 +103,26 @@ system_prompt = (
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Variável auxiliar para capturar cliques nos botões de atalho
+pergunta_clicada = None
+
 # ==============================================================================
-# 🧼 BARRA LATERAL: DOWNLOAD DE PDFS E LIMPEZA DO CHAT
+# 🧼 BARRA LATERAL: BOTÕES DE TEXTO, PDFS E LIMPEZA
 # ==============================================================================
 with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
-    st.write("Acesse os materiais oficiais das nossas aulas:")
     
-  # Exemplo de Botão de Download 1: EBS
+    # NOVIDADE: Lista de aulas com botões de atalho para enviar a pergunta direto
+    st.markdown("### 🎥 Aulas Disponíveis")
+    st.write("Clique em uma aula para perguntar ao robô:")
+    for aula in AULAS_DO_CANAL:
+        if st.button(aula["titulo"], key=aula["titulo"]):
+            pergunta_clicada = aula["sugestao_pergunta"]
+
+    st.markdown("---")
+    st.markdown("### 📚 Materiais de Apoio")
+    
+     # Exemplo de Botão de Download 1: EBS
     caminho_pdf1 = "materiais/Ensino_Baseado_Simulacao.pdf"
     if os.path.exists(caminho_pdf1):
         with open(caminho_pdf1, "rb") as file:
@@ -136,16 +155,15 @@ with st.sidebar:
                 mime="application/pdf"
             )
 
-
     st.markdown("---")
     if st.button("🗑️ Limpar Conversa (Recomeçar)"):
         st.session_state.messages = []
         st.rerun()
 # ==============================================================================
 
-# Mensagem inicial de boas-vindas (Exibe apenas se o chat estiver vazio)
+# Mensagem inicial de boas-vindas
 if len(st.session_state.messages) == 0:
-    st.info("👋 **Olá, cientista!** Digite sua dúvida aqui embaixo na caixa de texto. Eu vou te explicar o assunto e carregar o vídeo da nossa aula correspondente para você assistir!")
+    st.info("👋 **Olá, cientista!** Escolha uma das aulas na barra lateral ou digite sua dúvida aqui embaixo. Eu vou te explicar o assunto e carregar o vídeo correspondente!")
 
 # Exibe as mensagens armazenadas usando avatares customizados
 for message in st.session_state.messages:
@@ -153,7 +171,11 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"], avatar=avatar):
         st.markdown(message["content"])
 
-if pergunta := st.chat_input("Digite sua dúvida aqui (Ex: Como funciona a fotossíntese?)"):
+# Captura a entrada: seja digitada na caixa ou clicada no atalho lateral
+caixa_entrada = st.chat_input("Digite sua dúvida aqui...")
+pergunta = caixa_entrada if caixa_entrada else pergunta_clicada
+
+if pergunta:
     # Mensagem do Aluno
     with st.chat_message("user", avatar="🧑‍🎓"):
         st.markdown(pergunta)
@@ -200,3 +222,7 @@ if pergunta := st.chat_input("Digite sua dúvida aqui (Ex: Como funciona a fotos
             
         except Exception as e:
             st.error(f"Erro ao acionar a IA: {e}")
+            
+    # Se a pergunta veio de um botão lateral, força o recarregamento para sincronizar o chat visualmente
+    if pergunta_clicada:
+        st.rerun()
