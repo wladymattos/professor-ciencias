@@ -23,7 +23,7 @@ AULAS_DO_CANAL = [
         "link": "https://www.youtube.com/watch?v=lw9nPJH2X8c"
     },
     {
-        "texto": "Na aula sobre soluções explicamos o que são soluções químicas e como elas são formadas.",
+        "texto": "Na aula sobre soluções explicamos o que é uma solução e como ela é formada.",
         "link": "https://www.youtube.com/watch?v=QT1osnLDjjA&t=8s"
     }
 
@@ -58,21 +58,55 @@ system_prompt = (
     "Se responder à pergunta usando o contexto, avise ao aluno que um link clicável e o player da aula foram disponibilizados abaixo para ele assistir."
 )
 
-# Inicializa o histórico de mensagens na tela
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # ==============================================================================
-# 🧼 ADIÇÃO: BARRA LATERAL COM BOTÃO PARA LIMPAR O CHAT
+# 🧼 BARRA LATERAL: DOWNLOAD DE PDFS E LIMPEZA DO CHAT
 # ==============================================================================
 with st.sidebar:
+    st.header("📚 Materiais de Apoio")
+    st.write("Baixe o material do curso:")
+    
+    # Exemplo de Botão de Download 1: EBS
+    caminho_pdf1 = "materiais/Ensino_Baseado_Simulacao.pdf"
+    if os.path.exists(caminho_pdf1):
+        with open(caminho_pdf1, "rb") as file:
+            st.download_button(
+                label="📥 Baixar Ensino Baseado em Simulação (PDF)",
+                data=file,
+                file_name="Ensino_Baseado_Simulacao.pdf",
+                mime="application/pdf"
+            )
+            
+    # Exemplo de Botão de Download 2: Partículas
+    caminho_pdf2 = "materiais/Particulas.pdf"
+    if os.path.exists(caminho_pdf2):
+        with open(caminho_pdf2, "rb") as file:
+            st.download_button(
+                label="📝 Baixar Partículas",
+                data=file,
+                file_name="Particulas.pdf",
+                mime="application/pdf"
+            )
+
+    # Exemplo de Botão de Download 3: Teoria ácido-base de Lewis
+    caminho_pdf3 = "materiais/Teoria_acido_base_Lewis.pdf"
+    if os.path.exists(caminho_pdf3):
+        with open(caminho_pdf3, "rb") as file:
+            st.download_button(
+                label="📥 Teoria ácido-base de Lewis",
+                data=file,
+                file_name="Teoria_acido_base_Lewis.pdf",
+                mime="application/pdf"
+            )
+    st.markdown("---")
     st.header("⚙️ Opções do Chat")
-    if st.button("🧹 Limpar Tela (Nova Pergunta)"):
-        st.session_state.messages = []  # Apaga todas as mensagens da memória
-        st.rerun()  # Recarrega a página com a tela limpa imediatamente
+    if st.button("Core 🧹 Limpar Tela (Nova Pergunta)"):
+        st.session_state.messages = []
+        st.rerun()
 # ==============================================================================
 
-# Exibe as mensagens armazenadas na sessão
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
