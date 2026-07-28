@@ -13,30 +13,59 @@ st.set_page_config(
 )
 
 # ==============================================================================
-# 🎨 DESIGN PERSONALIZADO: Aplica cores de Ciências (Verde Água e Grafite)
+# 🎨 DESIGN PREMIUM: Adiciona o Degradê de Fundo e Estiliza os Balões do Chat
 # ==============================================================================
 st.markdown("""
     <style>
-        /* Cor de fundo principal e do texto */
+        /* 🌌 DEFINE O DEGRADÊ DE FUNDO DA TELA INTEIRA */
         .stApp {
-            background-color: #f4f7f6;
+            background: linear-gradient(135deg, #eef5f3 0%, #dbe7e4 100%) !important;
+            background-attachment: fixed;
         }
+
+        /* 📌 Se você preferir usar uma IMAGEM de fundo em vez de degradê, 
+           apague as linhas da .stApp acima e use as linhas abaixo:
+        .stApp {
+            background-image: url("https://unsplash.com");
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        */
+
+        /* Estilização dos títulos */
         h1, h2, h3 {
             color: #1e3d33 !important;
             font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-weight: 700;
         }
-        /* Customização dos botões da barra lateral */
+
+        /* Customização dos botões da barra lateral escura */
         .stButton>button {
-            border-radius: 8px !important;
+            border-radius: 12px !important;
             background-color: #2a5c4d !important;
             color: white !important;
             border: none !important;
             width: 100%;
-            transition: 0.3s;
+            padding: 10px !important;
+            font-weight: bold !important;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
         }
         .stButton>button:hover {
             background-color: #1e3d33 !important;
-            transform: scale(1.02);
+            transform: translateY(-2px);
+            box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Deixa os balões de conversa levemente transparentes e elegantes */
+        .stChatMessage {
+            background-color: rgba(255, 255, 255, 0.75) !important;
+            border-radius: 15px !important;
+            padding: 15px !important;
+            margin-bottom: 10px !important;
+            box-shadow: 0px 2px 5px rgba(0,0,0,0.02) !important;
+            backdrop-filter: blur(5px);
         }
     </style>
 """, unsafe_allow_html=True)
@@ -44,6 +73,7 @@ st.markdown("""
 # Cabeçalho Principal Estilizado
 st.title("🧬 Robô Professor de Ciências")
 st.markdown("---")
+
 
 # ==============================================================================
 # 🧠 CADASTRE SUAS AULAS AQUI (Texto resumido + Link limpo + Título + Sugestão)
