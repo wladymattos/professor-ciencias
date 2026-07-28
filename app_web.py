@@ -23,7 +23,7 @@ AULAS_DO_CANAL = [
         "link": "https://www.youtube.com/watch?v=lw9nPJH2X8c"
     },
     {
-        "texto": "Na aula sobre soluções explicamos o que são soluções químcias e como ela são formadas.",
+        "texto": "Na aula sobre soluções explicamos o que são soluções químicas e como elas são formadas.",
         "link": "https://www.youtube.com/watch?v=QT1osnLDjjA&t=8s"
     }
 
