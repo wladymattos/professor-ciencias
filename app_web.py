@@ -5,10 +5,45 @@ from sentence_transformers import SentenceTransformer
 from google import genai
 from google.genai import types
 
-# Configuração da página Web
-st.set_page_config(page_title="🤖 Professor de Ciências AI", page_icon="🧬")
-st.title("🤖 Robô Professor de Ciências")
-st.subheader("Tire suas dúvidas com base em nossas videoaulas!")
+# Configuração da página Web com título e ícone customizados
+st.set_page_config(
+    page_title="Robô Professor de Ciências", 
+    page_icon="🧬",
+    layout="centered"
+)
+
+# ==============================================================================
+# 🎨 DESIGN PERSONALIZADO: Aplica cores de Ciências (Verde Água e Grafite)
+# ==============================================================================
+st.markdown("""
+    <style>
+        /* Cor de fundo principal e do texto */
+        .stApp {
+            background-color: #f4f7f6;
+        }
+        h1, h2, h3 {
+            color: #1e3d33 !important;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+        /* Customização dos botões da barra lateral */
+        .stButton>button {
+            border-radius: 8px !important;
+            background-color: #2a5c4d !important;
+            color: white !important;
+            border: none !important;
+            width: 100%;
+            transition: 0.3s;
+        }
+        .stButton>button:hover {
+            background-color: #1e3d33 !important;
+            transform: scale(1.02);
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# Cabeçalho Principal Estilizado
+st.title("🧬 Robô Professor de Ciências")
+st.markdown("---")
 
 # ==============================================================================
 # 🧠 CADASTRE SUAS AULAS AQUI (Texto resumido + Link limpo de compartilhamento)
@@ -26,7 +61,6 @@ AULAS_DO_CANAL = [
         "texto": "Na aula sobre soluções explicamos o que é uma solução e como ela é formada.",
         "link": "https://www.youtube.com/watch?v=QT1osnLDjjA&t=8s"
     }
-
 ]
 # ==============================================================================
 
@@ -58,6 +92,7 @@ system_prompt = (
     "Se responder à pergunta usando o contexto, avise ao aluno que um link clicável e o player da aula foram disponibilizados abaixo para ele assistir."
 )
 
+# Inicializa o histórico de mensagens na tela
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -65,10 +100,10 @@ if "messages" not in st.session_state:
 # 🧼 BARRA LATERAL: DOWNLOAD DE PDFS E LIMPEZA DO CHAT
 # ==============================================================================
 with st.sidebar:
-    st.header("📚 Materiais de Apoio")
-    st.write("Baixe o material do curso:")
+    st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
+    st.write("Acesse os materiais oficiais das nossas aulas:")
     
-    # Exemplo de Botão de Download 1: EBS
+  # Exemplo de Botão de Download 1: EBS
     caminho_pdf1 = "materiais/Ensino_Baseado_Simulacao.pdf"
     if os.path.exists(caminho_pdf1):
         with open(caminho_pdf1, "rb") as file:
@@ -100,19 +135,27 @@ with st.sidebar:
                 file_name="Teoria_acido_base_Lewis.pdf",
                 mime="application/pdf"
             )
+
+
     st.markdown("---")
-    st.header("⚙️ Opções do Chat")
-    if st.button("Core 🧹 Limpar Tela (Nova Pergunta)"):
+    if st.button("🗑️ Limpar Conversa (Recomeçar)"):
         st.session_state.messages = []
         st.rerun()
 # ==============================================================================
 
+# Mensagem inicial de boas-vindas (Exibe apenas se o chat estiver vazio)
+if len(st.session_state.messages) == 0:
+    st.info("👋 **Olá, cientista!** Digite sua dúvida aqui embaixo na caixa de texto. Eu vou te explicar o assunto e carregar o vídeo da nossa aula correspondente para você assistir!")
+
+# Exibe as mensagens armazenadas usando avatares customizados
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
+    avatar = "🧑‍🎓" if message["role"] == "user" else "🤖"
+    with st.chat_message(message["role"], avatar=avatar):
         st.markdown(message["content"])
 
-if pergunta := st.chat_input("Pergunte algo sobre a nossa aula (ex: Como funciona a fotossíntese?)"):
-    with st.chat_message("user"):
+if pergunta := st.chat_input("Digite sua dúvida aqui (Ex: Como funciona a fotossíntese?)"):
+    # Mensagem do Aluno
+    with st.chat_message("user", avatar="🧑‍🎓"):
         st.markdown(pergunta)
     st.session_state.messages.append({"role": "user", "content": pergunta})
 
@@ -131,7 +174,8 @@ if pergunta := st.chat_input("Pergunte algo sobre a nossa aula (ex: Como funcion
 
     contexto_formatado = f"Conteúdo da aula: {texto_encontrado}\nLink do Vídeo: {url_para_abrir}"
 
-    with st.chat_message("assistant"):
+    # Resposta do Professor
+    with st.chat_message("assistant", avatar="🤖"):
         try:
             config_ia = types.GenerateContentConfig(
                 system_instruction=system_prompt + f"\n\nContexto:\n{contexto_formatado}",
@@ -148,9 +192,9 @@ if pergunta := st.chat_input("Pergunte algo sobre a nossa aula (ex: Como funcion
             st.markdown(resposta_final)
             
             if url_para_abrir and "youtube.com" in url_para_abrir:
-                st.write(f"🔗 [Clique aqui para abrir o vídeo diretamente no YouTube]({url_para_abrir})")
+                st.markdown(f"🔗 **[Clique aqui para abrir diretamente no YouTube]({url_para_abrir})**")
                 st.video(url_para_abrir)
-                st.success("🎬 Player da aula carregado acima!")
+                st.success("🎬 Vídeo da aula carregado acima com sucesso!")
                 
             st.session_state.messages.append({"role": "assistant", "content": resposta_final})
             
