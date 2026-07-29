@@ -2,7 +2,7 @@ import os
 import streamlit as st
 import numpy as np
 import base64
-import requests  # Utilizado para fazer a chamada direta e segura na API estável v1
+import requests
 from sentence_transformers import SentenceTransformer
 
 # Configuração da página Web
@@ -46,7 +46,7 @@ st.markdown(f"""
 # 🧠 CADASTRE SUAS AULAS AQUI
 # ==============================================================================
 AULAS_DO_CANAL = [
-        {
+    {
         "titulo": "🌌 O que é química?",
         "sugestao_pergunta": "Explique o que é química?",
         "texto": " Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo..",
@@ -99,7 +99,6 @@ if not st.session_state.autenticado:
         elif len(chave_api.strip()) < 10:
             st.error("❌ Esta chave de API está muito curta para ser válida. Verifique se copiou o código completo.")
         else:
-            # CORREÇÃO: Mini-teste direto via URL estável v1 de produção da Google (Imune a bugs de pacotes)
             url_teste = f"https://googleapis.com{chave_api.strip()}"
             headers = {"Content-Type": "application/json"}
             payload = {"contents": [{"parts": [{"text": "oi"}]}]}
@@ -112,7 +111,8 @@ if not st.session_state.autenticado:
                     st.session_state.user_key = chave_api.strip()
                     st.rerun()
                 else:
-                    erro_msg = response.json().get("error", {}).get("message", "Chave inválida.")
+                    erro_json = response.json()
+                    erro_msg = erro_json.get("error", {}).get("message", "Chave inválida.")
                     st.error(f"❌ Erro de Autenticação: {erro_msg}")
             except Exception as e:
                 st.error(f"❌ Falha de conexão com os servidores do Google: {e}")
@@ -193,7 +193,7 @@ with st.sidebar:
                 mime="application/pdf"
             )
 
-       st.markdown("---")
+    st.markdown("---")
     if st.button("🗑️ Limpar Conversa (Recomeçar)"):
         st.session_state.messages = []
         st.rerun()
@@ -213,4 +213,6 @@ pergunta = caixa_entrada if caixa_entrada else pergunta_clicada
 if pergunta:
     with st.chat_message("user", avatar="🧑‍🎓"):
         st.markdown(pergunta)
+    st.session_state.messages.append({"role": "user", "content": pergunta})
+
 
