@@ -47,7 +47,7 @@ st.markdown(f"""
 # 🧠 CADASTRE SUAS AULAS AQUI
 # ==============================================================================
 AULAS_DO_CANAL = [
-        {
+       {
         "titulo": "🌌 O que é química?",
         "sugestao_pergunta": "Explique o que é química?",
         "texto": " Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo..",
@@ -65,6 +65,7 @@ AULAS_DO_CANAL = [
         "texto": " Na aula sobre soluções explicamos o que é uma solução e como ela é formada.",
         "link": " https://www.youtube.com/watch?v=QT1osnLDjjA&t=8s "
     }
+
 ]
 
 # Inicializa as matrizes matemáticas de busca semântica local
@@ -101,10 +102,10 @@ if not st.session_state.autenticado:
             st.error("❌ Esta chave de API está muito curta para ser válida. Verifique se copiou o código completo.")
         else:
             try:
-                # Faz um teste rápido para validar a cota da chave inserida no servidor do Google
+                # CORREÇÃO: Alterado para o modelo gemini-1.5-flash para garantir compatibilidade universal
                 test_client = genai.Client(api_key=chave_api)
                 test_client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-1.5-flash",
                     contents="oi"
                 )
                 st.session_state.autenticado = True
@@ -217,6 +218,6 @@ if pergunta:
 
     # Busca Semântica Local
     vetor_pergunta = model_embedding.encode([pergunta], convert_to_numpy=True)
-    scores = np.dot(matriz_vetores, vetor_pergunta.T).flatten()
+
 
 
