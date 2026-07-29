@@ -47,7 +47,7 @@ st.markdown(f"""
 # 🧠 CADASTRE SUAS AULAS AQUI
 # ==============================================================================
 AULAS_DO_CANAL = [
-{
+        {
         "titulo": "🌌 O que é química?",
         "sugestao_pergunta": "Explique o que é química?",
         "texto": " Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo..",
@@ -91,30 +91,29 @@ if not st.session_state.autenticado:
     st.title("🧬 Área de Login do Aluno")
     st.markdown("Por favor, entre com suas credenciais para acessar o robô professor.")
     
-    with st.container():
-        email = st.text_input("📧 E-mail do Aluno", placeholder="exemplo@email.com")
-        chave_api = st.text_input("🔑 Senha (Sua Chave API do Gemini)", type="password", placeholder="AIzaSy...")
-        
-              if st.button("🚪 Entrar no Chat"):
-            if email.strip() == "" or chave_api.strip() == "":
-                st.warning("⚠️ Preencha todos os campos para continuar!")
-            elif len(chave_api.strip()) < 10:
-                st.error("❌ Esta chave de API está muito curta para ser válida. Verifique se copiou o código completo.")
-            else:
-                try:
-                    # Faz um teste rápido e direto para validar a chave e cota no servidor do Google
-                    test_client = genai.Client(api_key=chave_api)
-                    test_client.models.generate_content(
-                        model="gemini-2.5-flash",
-                        contents="oi"
-                    )
-                    st.session_state.autenticado = True
-                    st.session_state.user_email = email
-                    st.session_state.user_key = chave_api
-                    st.rerun()
-                except Exception:
-                    st.error("❌ Erro de Autenticação: Sua chave API está incorreta, expirada ou sem cota.")
-
+    email = st.text_input("📧 E-mail do Aluno", placeholder="exemplo@email.com")
+    chave_api = st.text_input("🔑 Senha (Sua Chave API do Gemini)", type="password", placeholder="AIzaSy... ou GEMINI_...")
+    
+    if st.button("🚪 Entrar no Chat"):
+        if email.strip() == "" or chave_api.strip() == "":
+            st.warning("⚠️ Preencha todos os campos para continuar!")
+        elif len(chave_api.strip()) < 10:
+            st.error("❌ Esta chave de API está muito curta para ser válida. Verifique se copiou o código completo.")
+        else:
+            try:
+                # Faz um teste rápido para validar a cota da chave inserida no servidor do Google
+                test_client = genai.Client(api_key=chave_api)
+                test_client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents="oi"
+                )
+                st.session_state.autenticado = True
+                st.session_state.user_email = email
+                st.session_state.user_key = chave_api
+                st.rerun()
+            except Exception:
+                st.error("❌ Erro de Autenticação: Sua chave API está incorreta, expirada ou sem cota.")
+    st.stop()
 
 # ==============================================================================
 # 🤖 INTERFACE PRINCIPAL DO CHAT (Acessível após o login)
@@ -139,7 +138,7 @@ if "messages" not in st.session_state:
 pergunta_clicada = None
 
 # ==============================================================================
-# 🧼 BARRA LATERAL RESTAURADA (Logout, Atalhos, PDFs e Limpeza)
+# 🧼 BARRA LATERAL (Logout, Atalhos, PDFs e Limpeza)
 # ==============================================================================
 with st.sidebar:
     st.markdown(f"<h3 style='text-align: center; color: #2a5c4d;'>👤 Aluno: {st.session_state.user_email}</h3>", unsafe_allow_html=True)
@@ -161,7 +160,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### 📚 Materiais de Apoio")
     
-# Exemplo de Botão de Download 1: EBS
+     # Exemplo de Botão de Download 1: EBS
     caminho_pdf1 = "materiais/Ensino_Baseado_Simulacao.pdf"
     if os.path.exists(caminho_pdf1):
         with open(caminho_pdf1, "rb") as file:
@@ -217,4 +216,7 @@ if pergunta:
     st.session_state.messages.append({"role": "user", "content": pergunta})
 
     # Busca Semântica Local
+    vetor_pergunta = model_embedding.encode([pergunta], convert_to_numpy=True)
+    scores = np.dot(matriz_vetores, vetor_pergunta.T).flatten()
+
 
