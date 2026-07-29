@@ -95,14 +95,14 @@ if not st.session_state.autenticado:
         email = st.text_input("📧 E-mail do Aluno", placeholder="exemplo@email.com")
         chave_api = st.text_input("🔑 Senha (Sua Chave API do Gemini)", type="password", placeholder="AIzaSy...")
         
-        if st.button("🚪 Entrar no Chat"):
+              if st.button("🚪 Entrar no Chat"):
             if email.strip() == "" or chave_api.strip() == "":
                 st.warning("⚠️ Preencha todos os campos para continuar!")
-            elif not chave_api.startswith("AIzaSy"):
-                st.error("❌ Esta não parece ser uma chave API válida do Gemini (deve começar com AIzaSy).")
+            elif len(chave_api.strip()) < 10:
+                st.error("❌ Esta chave de API está muito curta para ser válida. Verifique se copiou o código completo.")
             else:
                 try:
-                    # Faz um teste rápido para validar a cota da chave inserida
+                    # Faz um teste rápido e direto para validar a chave e cota no servidor do Google
                     test_client = genai.Client(api_key=chave_api)
                     test_client.models.generate_content(
                         model="gemini-2.5-flash",
@@ -114,7 +114,7 @@ if not st.session_state.autenticado:
                     st.rerun()
                 except Exception:
                     st.error("❌ Erro de Autenticação: Sua chave API está incorreta, expirada ou sem cota.")
-    st.stop()
+
 
 # ==============================================================================
 # 🤖 INTERFACE PRINCIPAL DO CHAT (Acessível após o login)
