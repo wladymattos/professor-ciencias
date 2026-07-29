@@ -66,6 +66,7 @@ AULAS_DO_CANAL = [
         "link": " https://www.youtube.com/watch?v=QT1osnLDjjA&t=8s "
     }
 ]
+
 # Inicializa as matrizes matemáticas de busca semântica local
 @st.cache_resource
 def inicializar_busca_local():
@@ -100,18 +101,14 @@ if not st.session_state.autenticado:
             st.error("❌ Esta chave de API está muito curta para ser válida. Verifique se copiou o código completo.")
         else:
             try:
-                # CORREÇÃO: Remove chaves fantasmas do ambiente para o Google ler a chave do input
-                if "GOOGLE_API_KEY" in os.environ:
-                    del os.environ["GOOGLE_API_KEY"]
-                if "GEMINI_API_KEY" in os.environ:
-                    del os.environ["GEMINI_API_KEY"]
+                if "GOOGLE_API_KEY" in os.environ: del os.environ["GOOGLE_API_KEY"]
+                if "GEMINI_API_KEY" in os.environ: del os.environ["GEMINI_API_KEY"]
                 
-                # Força a criação do cliente injetando a chave digitada manualmente
                 test_client = genai.Client(api_key=chave_api.strip())
                 
-                # Executa o teste com o modelo mais atualizado da geração vigente
+                # CORREÇÃO DEFINITIVA: Mudança para gemini-1.5-flash para aceitação universal
                 test_client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-1.5-flash",
                     contents="oi"
                 )
                 
@@ -120,7 +117,6 @@ if not st.session_state.autenticado:
                 st.session_state.user_key = chave_api.strip()
                 st.rerun()
             except Exception as e:
-                # Se falhar, exibe o erro técnico real para sabermos o motivo
                 st.error(f"❌ Erro de Autenticação: Verifique se sua chave possui cotas. Detalhes: {e}")
     st.stop()
 
@@ -131,7 +127,6 @@ st.title("🧬 Robô Professor de Ciências")
 st.subheader(f"Olá, {st.session_state.user_email}! Tire suas dúvidas com base em nossas videoaulas.")
 st.markdown("---")
 
-# CORREÇÃO: Limpa e injeta a chave autenticada do aluno na sessão atual
 if "GOOGLE_API_KEY" in os.environ: del os.environ["GOOGLE_API_KEY"]
 if "GEMINI_API_KEY" in os.environ: del os.environ["GEMINI_API_KEY"]
 ai_client = genai.Client(api_key=st.session_state.user_key)
@@ -171,7 +166,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### 📚 Materiais de Apoio")
     
-     # Exemplo de Botão de Download 1: EBS
+         # Exemplo de Botão de Download 1: EBS
     caminho_pdf1 = "materiais/Ensino_Baseado_Simulacao.pdf"
     if os.path.exists(caminho_pdf1):
         with open(caminho_pdf1, "rb") as file:
@@ -212,4 +207,15 @@ with st.sidebar:
 
 if len(st.session_state.messages) == 0:
     st.info("👋 Escolha uma das aulas na barra lateral ou digite sua dúvida aqui embaixo. Eu vou te explicar o assunto e carregar o vídeo correspondente!")
+
+for message in st.session_state.messages:
+    avatar = "🧑‍🎓" if message["role"] == "user" else "🤖"
+    with st.chat_message(message["role"], avatar=avatar):
+        st.markdown(message["content"])
+
+caixa_entrada = st.chat_input("Digite sua dúvida aqui...")
+pergunta = caixa_entrada if caixa_entrada else pergunta_clicada
+
+if pergunta:
+
 
