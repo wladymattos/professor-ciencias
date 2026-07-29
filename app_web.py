@@ -2,9 +2,8 @@ import os
 import streamlit as st
 import numpy as np
 import base64
+import requests  # Utilizado para fazer a chamada direta e segura na API estável v1
 from sentence_transformers import SentenceTransformer
-from google import genai
-from google.genai import types
 
 # Configuração da página Web
 st.set_page_config(
@@ -100,24 +99,23 @@ if not st.session_state.autenticado:
         elif len(chave_api.strip()) < 10:
             st.error("❌ Esta chave de API está muito curta para ser válida. Verifique se copiou o código completo.")
         else:
+            # CORREÇÃO: Mini-teste direto via URL estável v1 de produção da Google (Imune a bugs de pacotes)
+            url_teste = f"https://googleapis.com{chave_api.strip()}"
+            headers = {"Content-Type": "application/json"}
+            payload = {"contents": [{"parts": [{"text": "oi"}]}]}
+            
             try:
-                if "GOOGLE_API_KEY" in os.environ: del os.environ["GOOGLE_API_KEY"]
-                if "GEMINI_API_KEY" in os.environ: del os.environ["GEMINI_API_KEY"]
-                
-                test_client = genai.Client(api_key=chave_api.strip())
-                
-                # CORREÇÃO DEFINITIVA: Mudança para gemini-1.5-flash para aceitação universal
-                test_client.models.generate_content(
-                    model="gemini-1.5-flash",
-                    contents="oi"
-                )
-                
-                st.session_state.autenticado = True
-                st.session_state.user_email = email
-                st.session_state.user_key = chave_api.strip()
-                st.rerun()
+                response = requests.post(url_teste, json=payload, headers=headers, timeout=10)
+                if response.status_code == 200:
+                    st.session_state.autenticado = True
+                    st.session_state.user_email = email
+                    st.session_state.user_key = chave_api.strip()
+                    st.rerun()
+                else:
+                    erro_msg = response.json().get("error", {}).get("message", "Chave inválida.")
+                    st.error(f"❌ Erro de Autenticação: {erro_msg}")
             except Exception as e:
-                st.error(f"❌ Erro de Autenticação: Verifique se sua chave possui cotas. Detalhes: {e}")
+                st.error(f"❌ Falha de conexão com os servidores do Google: {e}")
     st.stop()
 
 # ==============================================================================
@@ -126,10 +124,6 @@ if not st.session_state.autenticado:
 st.title("🧬 Robô Professor de Ciências")
 st.subheader(f"Olá, {st.session_state.user_email}! Tire suas dúvidas com base em nossas videoaulas.")
 st.markdown("---")
-
-if "GOOGLE_API_KEY" in os.environ: del os.environ["GOOGLE_API_KEY"]
-if "GEMINI_API_KEY" in os.environ: del os.environ["GEMINI_API_KEY"]
-ai_client = genai.Client(api_key=st.session_state.user_key)
 
 system_prompt = (
     "Você é um robô professor de ciências altamente didático, paciente e divertido.\n"
@@ -166,7 +160,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### 📚 Materiais de Apoio")
     
-         # Exemplo de Botão de Download 1: EBS
+     # Exemplo de Botão de Download 1: EBS
     caminho_pdf1 = "materiais/Ensino_Baseado_Simulacao.pdf"
     if os.path.exists(caminho_pdf1):
         with open(caminho_pdf1, "rb") as file:
@@ -217,7 +211,5 @@ caixa_entrada = st.chat_input("Digite sua dúvida aqui...")
 pergunta = caixa_entrada if caixa_entrada else pergunta_clicada
 
 if pergunta:
-    with st.chat_message("user", avatar="🧑‍🎓"):
-        st.markdown(pergunta)
 
 
