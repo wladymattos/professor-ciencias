@@ -1,4 +1,4 @@
-import os
+     import os
 import streamlit as st
 import numpy as np
 import base64
@@ -47,7 +47,7 @@ st.markdown(f"""
 # 🧠 CADASTRE SUAS AULAS AQUI
 # ==============================================================================
 AULAS_DO_CANAL = [
-       {
+        {
         "titulo": "🌌 O que é química?",
         "sugestao_pergunta": "Explique o que é química?",
         "texto": " Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo..",
@@ -65,9 +65,7 @@ AULAS_DO_CANAL = [
         "texto": " Na aula sobre soluções explicamos o que é uma solução e como ela é formada.",
         "link": " https://www.youtube.com/watch?v=QT1osnLDjjA&t=8s "
     }
-
 ]
-
 # Inicializa as matrizes matemáticas de busca semântica local
 @st.cache_resource
 def inicializar_busca_local():
@@ -102,18 +100,28 @@ if not st.session_state.autenticado:
             st.error("❌ Esta chave de API está muito curta para ser válida. Verifique se copiou o código completo.")
         else:
             try:
-                # CORREÇÃO: Alterado para o modelo gemini-1.5-flash para garantir compatibilidade universal
-                test_client = genai.Client(api_key=chave_api)
+                # CORREÇÃO: Remove chaves fantasmas do ambiente para o Google ler a chave do input
+                if "GOOGLE_API_KEY" in os.environ:
+                    del os.environ["GOOGLE_API_KEY"]
+                if "GEMINI_API_KEY" in os.environ:
+                    del os.environ["GEMINI_API_KEY"]
+                
+                # Força a criação do cliente injetando a chave digitada manualmente
+                test_client = genai.Client(api_key=chave_api.strip())
+                
+                # Executa o teste com o modelo mais atualizado da geração vigente
                 test_client.models.generate_content(
-                    model="gemini-1.5-flash",
+                    model="gemini-2.5-flash",
                     contents="oi"
                 )
+                
                 st.session_state.autenticado = True
                 st.session_state.user_email = email
-                st.session_state.user_key = chave_api
+                st.session_state.user_key = chave_api.strip()
                 st.rerun()
-            except Exception:
-                st.error("❌ Erro de Autenticação: Sua chave API está incorreta, expirada ou sem cota.")
+            except Exception as e:
+                # Se falhar, exibe o erro técnico real para sabermos o motivo
+                st.error(f"❌ Erro de Autenticação: Verifique se sua chave possui cotas. Detalhes: {e}")
     st.stop()
 
 # ==============================================================================
@@ -123,7 +131,9 @@ st.title("🧬 Robô Professor de Ciências")
 st.subheader(f"Olá, {st.session_state.user_email}! Tire suas dúvidas com base em nossas videoaulas.")
 st.markdown("---")
 
-# Instancia o cliente do Google usando a chave do aluno conectado
+# CORREÇÃO: Limpa e injeta a chave autenticada do aluno na sessão atual
+if "GOOGLE_API_KEY" in os.environ: del os.environ["GOOGLE_API_KEY"]
+if "GEMINI_API_KEY" in os.environ: del os.environ["GEMINI_API_KEY"]
 ai_client = genai.Client(api_key=st.session_state.user_key)
 
 system_prompt = (
@@ -202,22 +212,4 @@ with st.sidebar:
 
 if len(st.session_state.messages) == 0:
     st.info("👋 Escolha uma das aulas na barra lateral ou digite sua dúvida aqui embaixo. Eu vou te explicar o assunto e carregar o vídeo correspondente!")
-
-for message in st.session_state.messages:
-    avatar = "🧑‍🎓" if message["role"] == "user" else "🤖"
-    with st.chat_message(message["role"], avatar=avatar):
-        st.markdown(message["content"])
-
-caixa_entrada = st.chat_input("Digite sua dúvida aqui...")
-pergunta = caixa_entrada if caixa_entrada else pergunta_clicada
-
-if pergunta:
-    with st.chat_message("user", avatar="🧑‍🎓"):
-        st.markdown(pergunta)
-    st.session_state.messages.append({"role": "user", "content": pergunta})
-
-    # Busca Semântica Local
-    vetor_pergunta = model_embedding.encode([pergunta], convert_to_numpy=True)
-
-
 
