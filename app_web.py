@@ -196,7 +196,7 @@ with st.sidebar:
     st.markdown("---")
     if st.button("🗑️ Limpar Conversa (Recomeçar)"):
         st.session_state.messages = []
-        st.rerun()
+    st.rerun()
 # ==============================================================================
 
 if len(st.session_state.messages) == 0:
