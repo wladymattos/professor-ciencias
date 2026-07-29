@@ -217,5 +217,7 @@ caixa_entrada = st.chat_input("Digite sua dúvida aqui...")
 pergunta = caixa_entrada if caixa_entrada else pergunta_clicada
 
 if pergunta:
+    with st.chat_message("user", avatar="🧑‍🎓"):
+        st.markdown(pergunta)
 
 
