@@ -193,10 +193,10 @@ with st.sidebar:
                 mime="application/pdf"
             )
 
-    st.markdown("---")
+       st.markdown("---")
     if st.button("🗑️ Limpar Conversa (Recomeçar)"):
         st.session_state.messages = []
-    st.rerun()
+        st.rerun()
 # ==============================================================================
 
 if len(st.session_state.messages) == 0:
@@ -211,5 +211,6 @@ caixa_entrada = st.chat_input("Digite sua dúvida aqui...")
 pergunta = caixa_entrada if caixa_entrada else pergunta_clicada
 
 if pergunta:
-
+    with st.chat_message("user", avatar="🧑‍🎓"):
+        st.markdown(pergunta)
 
