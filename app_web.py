@@ -1,4 +1,4 @@
-     import os
+import os
 import streamlit as st
 import numpy as np
 import base64
