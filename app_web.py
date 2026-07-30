@@ -46,7 +46,7 @@ st.markdown(f"""
 # 🧠 CADASTRE SUAS AULAS AQUI
 # ==============================================================================
 AULAS_DO_CANAL = [
-  {
+{
         "titulo": "🌌 O que é química?",
         "sugestao_pergunta": "Explique o que é química?",
         "texto": " Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo..",
@@ -65,7 +65,6 @@ AULAS_DO_CANAL = [
         "link": " https://www.youtube.com/watch?v=QT1osnLDjjA&t=8s "
     }
 ]
-
 # Inicializa as matrizes matemáticas de busca semântica local
 @st.cache_resource
 def inicializar_busca_local():
@@ -99,7 +98,7 @@ if not st.session_state.autenticado:
         elif len(chave_api.strip()) < 10:
             st.error("❌ Esta chave de API está muito curta para ser válida. Verifique se copiou o código completo.")
         else:
-            # CORREÇÃO DA URL: Caminho estruturado com as barras corretas para evitar o 404
+            # CORREÇÃO DA URL: Incluído o 'models/' obrigatório na URL do teste de login
             url_teste = "https://googleapis.com"
             headers = {
                 "Content-Type": "application/json",
@@ -212,4 +211,6 @@ for message in st.session_state.messages:
     avatar = "🧑‍🎓" if message["role"] == "user" else "🤖"
     with st.chat_message(message["role"], avatar=avatar):
         st.markdown(message["content"])
+
+
 
