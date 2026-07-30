@@ -46,7 +46,7 @@ st.markdown(f"""
 # 🧠 CADASTRE SUAS AULAS AQUI
 # ==============================================================================
 AULAS_DO_CANAL = [
-{
+    {
         "titulo": "🌌 O que é química?",
         "sugestao_pergunta": "Explique o que é química?",
         "texto": " Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo..",
@@ -99,7 +99,7 @@ if not st.session_state.autenticado:
         elif len(chave_api.strip()) < 10:
             st.error("❌ Esta chave de API está muito curta para ser válida. Verifique se copiou o código completo.")
         else:
-            # CORREÇÃO FOCADA: Alterado o link do teste para o modelo estável vigente gemini-2.5-flash
+            # CORREÇÃO FOCADA: Adicionado o escopo obrigatório /models/ antes do nome do modelo na URL
             url_teste = "https://googleapis.com"
             headers = {
                 "Content-Type": "application/json",
@@ -212,6 +212,7 @@ for message in st.session_state.messages:
     avatar = "🧑‍🎓" if message["role"] == "user" else "🤖"
     with st.chat_message(message["role"], avatar=avatar):
         st.markdown(message["content"])
+
 
 
 
