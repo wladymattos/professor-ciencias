@@ -73,7 +73,7 @@ def inicializar_busca_local():
     metadados = [{"source": aula["link"]} for aula in AULAS_DO_CANAL]
     model_embedding = SentenceTransformer("all-MiniLM-L6-v2")
     matriz_vetores = model_embedding.encode(textos, convert_to_numpy=True)
-    return model_embedding, textos, metadados, matriz_vetores
+    return model_embedding, texts, metadados, matriz_vetores
 
 model_embedding, lista_textos, lista_metas, matriz_vetores = inicializar_busca_local()
 
@@ -97,7 +97,6 @@ if not st.session_state.autenticado:
         elif len(chave_api.strip()) < 10:
             st.error("❌ Esta chave de API está muito curta para ser válida.")
         else:
-            # CORREÇÃO FOCADA: Salva diretamente e pula qualquer teste que possa gerar o 404
             st.session_state.autenticado = True
             st.session_state.user_key = chave_api.strip()
             st.rerun()
@@ -144,7 +143,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### 📚 Materiais de Apoio")
     
-     # Exemplo de Botão de Download 1: EBS
+         # Exemplo de Botão de Download 1: EBS
     caminho_pdf1 = "materiais/Ensino_Baseado_Simulacao.pdf"
     if os.path.exists(caminho_pdf1):
         with open(caminho_pdf1, "rb") as file:
@@ -220,3 +219,8 @@ if pergunta:
             url_chat = "https://googleapis.com"
             headers = {
                 "Content-Type": "application/json",
+                "x-goog-api-key": str(st.session_state.user_key)
+            }
+            
+            payload_chat = {
+
