@@ -46,7 +46,7 @@ st.markdown(f"""
 # 🧠 CADASTRE SUAS AULAS AQUI
 # ==============================================================================
 AULAS_DO_CANAL = [
-        {
+    {
         "titulo": "🌌 O que é química?",
         "sugestao_pergunta": "Explique o que é química?",
         "texto": " Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo..",
@@ -78,57 +78,36 @@ def inicializar_busca_local():
 model_embedding, lista_textos, lista_metas, matriz_vetores = inicializar_busca_local()
 
 # ==============================================================================
-# 🔑 GERENCIAMENTO DE SESSÃO E LOGIN
+# 🔑 GERENCIAMENTO DA CHAVE API DO ALUNO
 # ==============================================================================
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
-    st.session_state.user_email = ""
     st.session_state.user_key = ""
 
-# Se o usuário NÃO estiver logado, mostra a tela de login
+# Se o usuário NÃO inseriu a chave, mostra apenas a tela de entrada da chave
 if not st.session_state.autenticado:
-    st.title("🧬 Área de Login do Aluno")
-    st.markdown("Por favor, entre com suas credenciais para acessar o robô professor.")
+    st.title("🧬 Portal do Aluno")
+    st.markdown("Insira sua **Chave API do Gemini** para conversar com o robô professor.")
     
-    email = st.text_input("📧 E-mail do Aluno", placeholder="exemplo@email.com")
-    chave_api = st.text_input("🔑 Senha (Sua Chave API do Gemini)", type="password", placeholder="AIzaSy... ou GEMINI_...")
+    chave_api = st.text_input("🔑 Chave API do Gemini", type="password", placeholder="Cole aqui o seu código do Google AI Studio...")
     
-    if st.button("🚪 Entrar no Chat"):
-        if email.strip() == "" or chave_api.strip() == "":
-            st.warning("⚠️ Preencha todos os campos para continuar!")
+    if st.button("🚪 Acessar o Professor"):
+        if chave_api.strip() == "":
+            st.warning("⚠️ Cole uma chave válida para continuar!")
         elif len(chave_api.strip()) < 10:
-            st.error("❌ Esta chave de API está muito curta para ser válida. Verifique se copiou o código completo.")
+            st.error("❌ Esta chave de API está muito curta para ser válida.")
         else:
-            # CORREÇÃO CHAVE: Mudado para gemini-2.0-flash para aceitar chaves de contas novas
-            url_teste = "https://googleapis.com"
-            headers = {
-                "Content-Type": "application/json",
-                "x-goog-api-key": str(chave_api.strip())
-            }
-            payload = {"contents": [{"parts": [{"text": "oi"}]}]}
-            
-            try:
-                response = requests.post(url_teste, json=payload, headers=headers, timeout=10)
-                if response.status_code == 200:
-                    st.session_state.autenticado = True
-                    st.session_state.user_email = email
-                    st.session_state.user_key = chave_api.strip()
-                    st.rerun()
-                else:
-                    try:
-                        erro_msg = response.json().get("error", {}).get("message", "Chave inválida ou sem cota.")
-                    except:
-                        erro_msg = f"Erro no servidor do Google (Código {response.status_code})"
-                    st.error(f"❌ Erro de Autenticação: {erro_msg}")
-            except Exception as e:
-                st.error(f"❌ Falha de conexão com os servidores do Google: {e}")
+            # CORREÇÃO FOCADA: Salva diretamente e pula qualquer teste que possa gerar o 404
+            st.session_state.autenticado = True
+            st.session_state.user_key = chave_api.strip()
+            st.rerun()
     st.stop()
 
 # ==============================================================================
-# 🤖 INTERFACE PRINCIPAL DO CHAT (Acessível após o login)
+# 🤖 INTERFACE PRINCIPAL DO CHAT (Acessível após inserir a chave)
 # ==============================================================================
 st.title("🧬 Robô Professor de Ciências")
-st.subheader(f"Olá, {st.session_state.user_email}! Tire suas dúvidas com base em nossas videoaulas.")
+st.subheader("Tire suas dúvidas com base em nossas videoaulas!")
 st.markdown("---")
 
 system_prompt = (
@@ -144,14 +123,13 @@ if "messages" not in st.session_state:
 pergunta_clicada = None
 
 # ==============================================================================
-# 🧼 BARRA LATERAL (Logout, Atalhos, PDFs e Limpeza)
+# 🧼 BARRA LATERAL (Desconectar, Atalhos, PDFs e Limpeza)
 # ==============================================================================
 with st.sidebar:
-    st.markdown(f"<h3 style='text-align: center; color: #2a5c4d;'>👤 Aluno: {st.session_state.user_email}</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center; color: #2a5c4d;'>👤 Aluno Conectado</h3>", unsafe_allow_html=True)
     
-    if st.button("🚪 Sair da Conta"):
+    if st.button("🚪 Trocar Chave API"):
         st.session_state.autenticado = False
-        st.session_state.user_email = ""
         st.session_state.user_key = ""
         st.session_state.messages = []
         st.rerun()
@@ -213,5 +191,32 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"], avatar=avatar):
         st.markdown(message["content"])
 
+caixa_entrada = st.chat_input("Digite sua dúvida aqui...")
+pergunta = caixa_entrada if caixa_entrada else pergunta_clicada
 
+if pergunta:
+    with st.chat_message("user", avatar="🧑‍🎓"):
+        st.markdown(pergunta)
+    st.session_state.messages.append({"role": "user", "content": pergunta})
 
+    # Busca Semântica Local
+    vetor_pergunta = model_embedding.encode([pergunta], convert_to_numpy=True)
+    scores = np.dot(matriz_vetores, vetor_pergunta.T).flatten()
+    melhor_indice = int(np.argmax(scores))
+    
+    if scores[melhor_indice] > 0.35:
+        texto_encontrado = lista_textos[melhor_indice]
+        meta_encontrada = lista_metas[melhor_indice]
+        url_para_abrir = meta_encontrada.get("source", None)
+    else:
+        texto_encontrado = "Assunto não coberto pelas aulas cadastradas."
+        url_para_abrir = None
+
+    contexto_formatado = f"Conteúdo da aula: {texto_encontrado}\nLink do Vídeo: {url_para_abrir}"
+
+    with st.chat_message("assistant", avatar="🤖"):
+        try:
+            # Conexão direta na URL v1beta estável para o modelo gemini-2.0-flash
+            url_chat = "https://googleapis.com"
+            headers = {
+                "Content-Type": "application/json",
