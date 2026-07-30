@@ -46,7 +46,7 @@ st.markdown(f"""
 # 🧠 CADASTRE SUAS AULAS AQUI
 # ==============================================================================
 AULAS_DO_CANAL = [
-    {
+{
         "titulo": "🌌 O que é química?",
         "sugestao_pergunta": "Explique o que é química?",
         "texto": " Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo..",
@@ -99,8 +99,14 @@ if not st.session_state.autenticado:
         elif len(chave_api.strip()) < 10:
             st.error("❌ Esta chave de API está muito curta para ser válida. Verifique se copiou o código completo.")
         else:
-            url_teste = f"https://googleapis.com{chave_api.strip()}"
-            headers = {"Content-Type": "application/json"}
+            # CORREÇÃO FOCADA: URL limpa e fixa de produção v1
+            url_teste = "https://googleapis.com"
+            
+            # Passa a chave limpa e sem espaços direto no cabeçalho x-goog-api-key
+            headers = {
+                "Content-Type": "application/json",
+                "x-goog-api-key": str(chave_api.strip())
+            }
             payload = {"contents": [{"parts": [{"text": "oi"}]}]}
             
             try:
@@ -112,7 +118,7 @@ if not st.session_state.autenticado:
                     st.rerun()
                 else:
                     erro_json = response.json()
-                    erro_msg = erro_json.get("error", {}).get("message", "Chave inválida.")
+                    erro_msg = erro_json.get("error", {}).get("message", "Chave inválida ou sem cota.")
                     st.error(f"❌ Erro de Autenticação: {erro_msg}")
             except Exception as e:
                 st.error(f"❌ Falha de conexão com os servidores do Google: {e}")
@@ -160,36 +166,23 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### 📚 Materiais de Apoio")
     
-     # Exemplo de Botão de Download 1: EBS
-    caminho_pdf1 = "materiais/Ensino_Baseado_Simulacao.pdf"
+    caminho_pdf1 = "materiais/apostila_ciencias.pdf"
     if os.path.exists(caminho_pdf1):
         with open(caminho_pdf1, "rb") as file:
             st.download_button(
-                label="📥 Baixar Ensino Baseado em Simulação (PDF)",
+                label="📥 Baixar Apostila Geral (PDF)",
                 data=file,
-                file_name="Ensino_Baseado_Simulacao.pdf",
+                file_name="Apostila_de_Ciencias.pdf",
                 mime="application/pdf"
             )
             
-    # Exemplo de Botão de Download 2: Partículas
-    caminho_pdf2 = "materiais/Particulas.pdf"
+    caminho_pdf2 = "materiais/exercicios_fotossintese.pdf"
     if os.path.exists(caminho_pdf2):
         with open(caminho_pdf2, "rb") as file:
             st.download_button(
-                label="📝 Baixar Partículas",
+                label="📝 Baixar Exercícios - Fotossíntese",
                 data=file,
-                file_name="Particulas.pdf",
-                mime="application/pdf"
-            )
-
-    # Exemplo de Botão de Download 3: Teoria ácido-base de Lewis
-    caminho_pdf3 = "materiais/Teoria_acido_base_Lewis.pdf"
-    if os.path.exists(caminho_pdf3):
-        with open(caminho_pdf3, "rb") as file:
-            st.download_button(
-                label="📥 Teoria ácido-base de Lewis",
-                data=file,
-                file_name="Teoria_acido_base_Lewis.pdf",
+                file_name="Exercicios_Fotossintese.pdf",
                 mime="application/pdf"
             )
 
@@ -208,11 +201,5 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 caixa_entrada = st.chat_input("Digite sua dúvida aqui...")
-pergunta = caixa_entrada if caixa_entrada else pergunta_clicada
-
-if pergunta:
-    with st.chat_message("user", avatar="🧑‍🎓"):
-        st.markdown(pergunta)
-    st.session_state.messages.append({"role": "user", "content": pergunta})
 
 
