@@ -2,8 +2,9 @@ import os
 import streamlit as st
 import numpy as np
 import base64
-import requests
 from sentence_transformers import SentenceTransformer
+from google import genai
+from google.genai import types
 
 # Configuração da página Web
 st.set_page_config(
@@ -73,7 +74,7 @@ def inicializar_busca_local():
     metadados = [{"source": aula["link"]} for aula in AULAS_DO_CANAL]
     model_embedding = SentenceTransformer("all-MiniLM-L6-v2")
     matriz_vetores = model_embedding.encode(textos, convert_to_numpy=True)
-    return model_embedding, texts, metadados, matriz_vetores
+    return model_embedding, textos, metadados, matriz_vetores
 
 model_embedding, lista_textos, lista_metas, matriz_vetores = inicializar_busca_local()
 
@@ -87,7 +88,7 @@ if "autenticado" not in st.session_state:
 # Se o usuário NÃO inseriu a chave, mostra apenas a tela de entrada da chave
 if not st.session_state.autenticado:
     st.title("🧬 Portal do Aluno")
-    st.markdown("Insira sua **Chave API do Gemini** para conversar com o robô professor.")
+    st.markdown("Insira sua **Chave API do Gemini** para acessar o robô professor.")
     
     chave_api = st.text_input("🔑 Chave API do Gemini", type="password", placeholder="Cole aqui o seu código do Google AI Studio...")
     
@@ -95,7 +96,7 @@ if not st.session_state.autenticado:
         if chave_api.strip() == "":
             st.warning("⚠️ Cole uma chave válida para continuar!")
         elif len(chave_api.strip()) < 10:
-            st.error("❌ Esta chave de API está muito curta para ser válida.")
+            st.error("❌ Esta chave de API está muito curta.")
         else:
             st.session_state.autenticado = True
             st.session_state.user_key = chave_api.strip()
@@ -143,7 +144,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### 📚 Materiais de Apoio")
     
-         # Exemplo de Botão de Download 1: EBS
+     # Exemplo de Botão de Download 1: EBS
     caminho_pdf1 = "materiais/Ensino_Baseado_Simulacao.pdf"
     if os.path.exists(caminho_pdf1):
         with open(caminho_pdf1, "rb") as file:
@@ -215,12 +216,8 @@ if pergunta:
 
     with st.chat_message("assistant", avatar="🤖"):
         try:
-            # Conexão direta na URL v1beta estável para o modelo gemini-2.0-flash
-            url_chat = "https://googleapis.com"
-            headers = {
-                "Content-Type": "application/json",
-                "x-goog-api-key": str(st.session_state.user_key)
-            }
+            # LIMPEZA DE AMBIENTE: Remove chaves fantasmas antigas do servidor
+            if "GOOGLE_API_KEY" in os.environ: del os.environ["GOOGLE_API_KEY"]
+            if "GEMINI_API_KEY" in os.environ: del os.environ["GEMINI_API_KEY"]
             
-            payload_chat = {
-
+            # Inicializa a biblioteca oficial usando EXCLUSIVAMENTE a chave digitada pelo usuário
