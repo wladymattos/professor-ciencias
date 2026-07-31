@@ -1,0 +1,21 @@
+[
+    {
+        "titulo": "🌌 O que é química?",
+        "sugestao_pergunta": "Explique o que é química?",
+        "texto": " Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo..",
+        "link": " https://www.youtube.com/watch?v=SCPEWIVOFiM&t=22s "
+    },
+    {
+        "titulo": "🌱 O que são partículas?",
+        "sugestao_pergunta": "Quais são as partículas que formam a matéria?",
+        "texto": "Na aula sobre partículas explicamos como são constituídos os átomos e as partículas que formam a matéria.",
+        "link": " https://www.youtube.com/watch?v=lw9nPJH2X8c "
+    },
+    {
+        "titulo": "🪐 Soluções químicas",
+        "sugestao_pergunta": "Como se formam as soluções químicas?",
+        "texto": " Na aula sobre soluções explicamos o que é uma solução e como ela é formada.",
+        "link": " https://www.youtube.com/watch?v=QT1osnLDjjA&t=8s "
+    }
+
+]
