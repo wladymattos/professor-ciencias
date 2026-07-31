@@ -55,44 +55,40 @@ st.title("🧬 Robô Professor de Ciências")
 st.markdown("---")
 
 AULAS_DO_CANAL = [
-    {"titulo": "🌌 O que é química?", "sugestao_pergunta": "Explique o que é química?", "texto": "Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo..", "link": "https://youtube.com"},
-    {"titulo": "🌱 O que são partículas?", "sugestao_pergunta": "Quais são as partículas que formam a matéria?", "texto": "Na aula sobre partículas explicamos como são constituídos os átomos e as partículas que formam a matéria.", "link": "https://youtube.com"},
-    {"titulo": "🪐 Soluções químicas", "sugestao_pergunta": "Como se formam as soluções químicas?", "texto": "Na aula sobre soluções explicamos o que é uma solução e como ela é formada.", "link": "https://youtube.com"}
+    {"titulo": "🌌 Aula: O que é química?", "link": "https://youtube.com /watch?v=SCPEWIVOFiM&t=14s"},
+    {"titulo": "🌱 Aula: O que são partículas?", "link": "https://youtube.com /watch?v=lw9nPJH2X8c&t=1s"},
+    {"titulo": "🪐 Aula: Soluções químicas", "link": "https://youtube.com /watch?v=QT1osnLDjjA&t=14s"}
 ]
 
 @st.cache_resource
 def inicializar_sistema_completo():
-    textos = [aula["texto"] for aula in AULAS_DO_CANAL]
-    metadados = [{"source": aula["link"], "titulo": aula["titulo"]} for aula in AULAS_DO_CANAL]
-    model_embedding = SentenceTransformer("all-MiniLM-L6-v2")
-    matriz_vetores = model_embedding.encode(textos, convert_to_numpy=True)
     chave_api = os.getenv("GOOGLE_API_KEY") or st.secrets.get("GOOGLE_API_KEY")
     if not chave_api:
         st.error("⚠️ Chave GOOGLE_API_KEY não configurada nos Secrets!")
         st.stop()
-    return model_embedding, textos, metadados, matriz_vetores, genai.Client(api_key=chave_api)
+    return genai.Client(api_key=chave_api)
 
-model_embedding, lista_textos, lista_metas, matriz_vetores, ai_client = inicializar_sistema_completo()
+ai_client = inicializar_sistema_completo()
 
 system_prompt = (
     "Você é um robô professor de ciências didático e divertido. "
     "Responda a qualquer dúvida ou conceito de ciências do aluno de forma clara. "
-    "Não crie links fictícios ou recomende outros canais ou vídeos externos. "
-    "Se e somente se o bloco de dados fornecido abaixo contiver informações diretamente ligadas ao tema exato perguntado, "
-    "mencione no corpo de texto que o aluno possui acesso a uma aula gravada."
+    "Foque estritamente em responder à pergunta de maneira educativa."
 )
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Barra lateral
+# ==============================================================================
+# 🧼 BARRA LATERAL METODOLOGIA DOWNLOAD
+# ==============================================================================
 with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
-    st.markdown("### 🎥 Aulas Disponíveis")
-    for aula in AULAS_DO_CANAL:
-        if st.button(aula["titulo"], key=f"btn_{aula['titulo']}"):
-            st.session_state.messages.append({"role": "user", "content": aula["sugestao_pergunta"]})
-            st.rerun()
+    
+    # Links das Aulas como Botões de Acesso Direto (Estilo Material de Apoio)
+    st.markdown("### 🎥 Assistir Aulas no Canal")
+    for i, aula in enumerate(AULAS_DO_CANAL):
+        st.link_button(label=f"▶️ {aula['titulo']}", url=aula['link'], key=f"link_aula_{i}")
 
     st.markdown("---")
     st.markdown("### 📚 Materiais de Apoio")
@@ -106,18 +102,19 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
-# Exibe o histórico de mensagens
+# Mensagem de boas-vindas estática
+if not st.session_state.messages:
+    st.info("👋 **Olá, cientista!** Utilize a barra lateral para acessar as aulas e materiais ou digite sua dúvida sobre qualquer assunto de Ciências abaixo!")
+
+# Histórico de conversas limpo (Apenas Chat + PDF)
 for i, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
         if message["role"] == "assistant":
-            if "video_link" in message:
-                st.markdown(f"🔗 **Aula recomendada:** [{message['video_titulo']}]({message['video_link']})")
-                st.video(message["video_link"])
             pdf_data = gerar_pdf_resposta(st.session_state.messages[i-1]["content"], message["content"])
             st.download_button(label="📥 Baixar Resposta em PDF", data=pdf_data, file_name=f"resposta_{i}.pdf", mime="application/pdf", key=f"dl_{i}")
 
-# Input de chat
+# Input de chat livre
 prompt_usuario = st.chat_input("Digite sua dúvida de ciências...")
 
 if prompt_usuario:
@@ -126,34 +123,13 @@ if prompt_usuario:
 
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
     pergunta_atual = st.session_state.messages[-1]["content"]
-    pergunta_lower = pergunta_atual.lower()
-    
-    # Busca por similaridade vetorial
-    vetor_pergunta = model_embedding.encode(pergunta_atual, convert_to_numpy=True)
-    scores = np.dot(matriz_vetores, vetor_pergunta) / (np.linalg.norm(matriz_vetores, axis=1) * np.linalg.norm(vetor_pergunta))
-    best_idx = np.argmax(scores)
-    
-    link_encontrado = None
-    titulo_encontrado = None
-    contexto_aulas = ""
-    
-    # MODIFICAÇÃO DE CONTROLE EXTREMO: Aumentado para 0.58 + Validação obrigatória de termos
-    palavras_chave = ["química", "quimica", "partícula", "particula", "átomo", "atomo", "solução", "solucao", "mistura"]
-    contem_termo = any(termo in pergunta_lower for termo in palavras_chave)
-    
-    if scores[best_idx] >= 0.58 and contem_termo:
-        contexto_aulas = lista_textos[best_idx]
-        link_encontrado = lista_metas[best_idx]["source"]
-        titulo_encontrado = lista_metas[best_idx]["titulo"]
-
-    prompt_final = f"Contexto interno de nossas produções:\n{contexto_aulas}\n\nDúvida livre do Aluno: {pergunta_atual}"
     
     with st.chat_message("assistant"):
         with st.spinner("Analisando os elementos... 🧪"):
             try:
                 resposta = ai_client.models.generate_content(
                     model='gemini-3.6-flash',
-                    contents=prompt_final,
+                    contents=pergunta_atual,
                     config=types.GenerateContentConfig(
                         system_instruction=system_prompt
                     )
@@ -163,16 +139,8 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                 texto_resposta = f"Erro na chamada da API com o modelo estável: {str(e)}"
             
             st.markdown(texto_resposta)
-            if link_encontrado:
-                st.markdown(f"🔗 **Aula recomendada:** [{titulo_encontrado}]({link_encontrado})")
-                st.video(link_encontrado)
-                
+            
             pdf_dados = gerar_pdf_resposta(pergunta_atual, texto_resposta)
             st.download_button(label="📥 Baixar Resposta em PDF", data=pdf_dados, file_name="resposta_ciencias.pdf", mime="application/pdf", key="dl_imediato")
             
-    historico_dict = {"role": "assistant", "content": texto_resposta}
-    if link_encontrado:
-        historico_dict["video_link"] = link_encontrado
-        historico_dict["video_titulo"] = titulo_encontrado
-        
-    st.session_state.messages.append(historico_dict)
+    st.session_state.messages.append({"role": "assistant", "content": texto_resposta})
