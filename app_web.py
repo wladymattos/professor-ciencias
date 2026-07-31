@@ -113,7 +113,8 @@ for i, message in enumerate(st.session_state.messages):
                 st.markdown(f"🔗 **Aula recomendada:** [{message['video_titulo']}]({message['video_link']})")
                 st.video(message["video_link"])
             pdf_data = gerar_pdf_resposta(st.session_state.messages[i-1]["content"], message["content"])
-            st.download_button(label="📥 Baixar Resposta em PDF", data=file_name=f"resposta_{i}.pdf", data=pdf_data, mime="application/pdf", key=f"dl_{i}")
+            # CORREÇÃO CRUCIAL AQUI: Parâmetros corrigidos sem duplicação de sintaxe
+            st.download_button(label="📥 Baixar Resposta em PDF", data=pdf_data, file_name=f"resposta_{i}.pdf", mime="application/pdf", key=f"dl_{i}")
 
 # Input de chat
 prompt_usuario = st.chat_input("Digite sua dúvida de ciências...")
@@ -144,7 +145,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     with st.chat_message("assistant"):
         with st.spinner("Analisando os elementos... 🧪"):
             try:
-                # CORREÇÃO DEFINITIVA: Mudança para o modelo estável mais recente suportado pela SDK
+                # MODELO CORRIGIDO PARA O ENDPOINT ESTÁVEL DA NOVA SDK
                 resposta = ai_client.models.generate_content(
                     model='gemini-2.5-flash',
                     contents=prompt_final,
@@ -155,7 +156,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                 )
                 texto_resposta = resposta.text if resposta.text else "Não consegui formular uma explicação."
             except Exception as e:
-                texto_resposta = f"Erro na chamada da API com o modelo atual: {str(e)}"
+                texto_resposta = f"Erro na chamada da API: {str(e)}"
             
             st.markdown(texto_resposta)
             if link_encontrado:
