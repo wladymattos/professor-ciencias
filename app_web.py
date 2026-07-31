@@ -1,12 +1,12 @@
 import os
 import streamlit as st
 import numpy as np
-import base64
+import base64  # CORREÇÃO: Importação essencial adicionada aqui
 from sentence_transformers import SentenceTransformer
 from google import genai
 from google.genai import types
 
-# Configuração da página Web
+# Configuração da página Web com título e ícone customizados
 st.set_page_config(
     page_title="Robô Professor de Ciências", 
     page_icon="🧬",
@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 # ==============================================================================
-# 🎨 DESIGN PREMIUM (IMAGEM OU DEGRADÊ DE FUNDO)
+# 🖼️ FUNÇÃO COMPLEMENTAR: CONVERTE A IMAGEM DO GITHUB EM FUNDO SEGURO
 # ==============================================================================
 def get_base64_image(image_path):
     if os.path.exists(image_path):
@@ -22,93 +22,120 @@ def get_base64_image(image_path):
             return base64.b64encode(img_file.read()).decode()
     return None
 
+# Busca a imagem 'fundo.jpg' que você subiu no seu repositório
 img_base64 = get_base64_image("fundo.jpg")
+
+# Se a imagem existir, aplica ela. Se não, aplica o degradê de segurança como plano B.
 if img_base64:
     css_fundo = f"""
     .stApp {{
         background-image: url("data:image/jpg;base64,{img_base64}");
-        background-size: cover; background-position: center; background-attachment: fixed;
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
     }}
     """
 else:
-    css_fundo = ".stApp { background: linear-gradient(135deg, #eef5f3 0%, #dbe7e4 100%) !important; background-attachment: fixed; }"
+    css_fundo = """
+    .stApp {
+        background: linear-gradient(135deg, #eef5f3 0%, #dbe7e4 100%) !important;
+        background-attachment: fixed;
+    }
+    """
 
+# Injeta os estilos CSS finais na página web
 st.markdown(f"""
     <style>
         {css_fundo}
-        h1, h2, h3 {{ color: #1e3d33 !important; font-family: 'Helvetica Neue', Arial, sans-serif; font-weight: 700; }}
-        .stButton>button {{ border-radius: 12px !important; background-color: #2a5c4d !important; color: white !important; border: none !important; width: 100%; padding: 10px !important; font-weight: bold !important; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.05); transition: all 0.3s ease; }}
-        .stButton>button:hover {{ background-color: #1e3d33 !important; transform: translateY(-2px); box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.1); }}
-        .stChatMessage {{ background-color: rgba(255, 255, 255, 0.85) !important; border-radius: 15px !important; padding: 15px !important; margin-bottom: 10px !important; box-shadow: 0px 4px 10px rgba(0,0,0,0.05) !important; backdrop-filter: blur(8px); }}
+
+        /* Estilização dos títulos */
+        h1, h2, h3 {{
+            color: #1e3d33 !important;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-weight: 700;
+        }}
+
+        /* Customização dos botões da barra lateral escura */
+        .stButton>button {{
+            border-radius: 12px !important;
+            background-color: #2a5c4d !important;
+            color: white !important;
+            border: none !important;
+            width: 100%;
+            padding: 10px !important;
+            font-weight: bold !important;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }}
+        .stButton>button:hover {{
+            background-color: #1e3d33 !important;
+            transform: translateY(-2px);
+            box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.1);
+        }}
+
+        /* Deixa os balões de conversa com efeito vidro fosco elegante sobre a imagem */
+        .stChatMessage {{
+            background-color: rgba(255, 255, 255, 0.85) !important;
+            border-radius: 15px !important;
+            padding: 15px !important;
+            margin-bottom: 10px !important;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.05) !important;
+            backdrop-filter: blur(8px);
+        }}
     </style>
 """, unsafe_allow_html=True)
 
+# Cabeçalho Principal Estilizado
+st.title("🧬 Robô Professor de Ciências")
+st.markdown("---")
+
+
 # ==============================================================================
-# 🧠 CADASTRE SUAS AULAS AQUI
+# 🧠 CADASTRE SUAS AULAS AQUI (Texto resumido + Link limpo + Título + Sugestão)
 # ==============================================================================
 AULAS_DO_CANAL = [
     {
-        "titulo": "🌌 Por que o céu é azul?",
-        "sugestao_pergunta": "Por que a cor do céu é azul?",
-        "texto": "Na aula sobre a Cor do Céu, explicamos que ele é azul por causa da dispersão da luz solar na atmosfera terrestre. A luz azul possui ondas mais curtas e se espalha muito mais do que as outras cores quando se choca com os gases do ar. Isso é conhecido fisicamente como Dispersão de Rayleigh.",
-        "link": "https://youtube.com"
+        "titulo": "🌌 O que é química?",
+        "sugestao_pergunta": "Explique o que é química?",
+        "texto": " Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo..",
+        "link": " https://www.youtube.com/watch?v=SCPEWIVOFiM&t=22s "
     },
     {
-        "titulo": "🌱 Como funciona a Fotossíntese?",
-        "sugestao_pergunta": "Como as plantas fazem fotossíntese?",
-        "texto": "Na aula sobre a Fotossíntese, explicamos que as plantas usam a luz do Sol, a água que absorvem pelas raízes e o gás carbônico do ar para produzir glicose (seu alimento) e liberar oxigênio puro de volta para a atmosfera. A clorofila é a responsável por captar essa luz solar e dá a cor verde às folhas.",
-        "link": "https://youtube.com"
+        "titulo": "🌱 O que são partículas?",
+        "sugestao_pergunta": "Quais são as partículas que formam a matéria?",
+        "texto": "Na aula sobre partículas explicamos como são constituídos os átomos e as partículas que formam a matéria.",
+        "link": " https://www.youtube.com/watch?v=lw9nPJH2X8c "
     },
     {
-        "titulo": "🪐 O Sistema Solar",
-        "sugestao_pergunta": "Quais são os planetas do sistema solar?",
-        "texto": "Na aula sobre o Sistema Solar, explicamos que o Sol fica no centro e oito planetas giram ao seu redor. Os quatro mais próximos são rochosos (Mercúrio, Vênus, Terra e Marte) e os quatro mais distantes são gigantes gasosos (Júpiter, Saturno, Urano e Netuno).",
-        "link": "https://youtube.com"
+        "titulo": "🪐 Soluções químicas",
+        "sugestao_pergunta": "Como se formam as soluções químicas?",
+        "texto": " Na aula sobre soluções explicamos o que é uma solução e como ela é formada.",
+        "link": " https://www.youtube.com/watch?v=QT1osnLDjjA&t=8s "
     }
-]
 
-# Inicializa as matrizes matemáticas de busca semântica local
+]
+# ==============================================================================
+
 @st.cache_resource
-def inicializar_busca_local():
+def inicializar_sistema_completo():
     textos = [aula["texto"] for aula in AULAS_DO_CANAL]
     metadados = [{"source": aula["link"]} for aula in AULAS_DO_CANAL]
+    
     model_embedding = SentenceTransformer("all-MiniLM-L6-v2")
     matriz_vetores = model_embedding.encode(textos, convert_to_numpy=True)
-    return model_embedding, textos, metadados, matriz_vetores
-
-model_embedding, lista_textos, lista_metas, matriz_vetores = inicializar_busca_local()
-
-# ==============================================================================
-# 🔑 GERENCIAMENTO DA CHAVE API DO ALUNO
-# ==============================================================================
-if "autenticado" not in st.session_state:
-    st.session_state.autenticado = False
-    st.session_state.user_key = ""
-
-# Se o usuário NÃO inseriu a chave, mostra apenas a tela de entrada da chave
-if not st.session_state.autenticado:
-    st.title("🧬 Portal do Aluno")
-    st.markdown("Insira sua **Chave API do Gemini** para acessar o robô professor.")
     
-    chave_api = st.text_input("🔑 Chave API do Gemini", type="password", placeholder="Cole aqui o seu código do Google AI Studio...")
-    
-    if st.button("🚪 Acessar o Professor"):
-        if chave_api.strip() == "":
-            st.warning("⚠️ Cole uma chave válida para continuar!")
-        elif len(chave_api.strip()) < 10:
-            st.error("❌ Esta chave de API está muito curta.")
-        else:
-            st.session_state.autenticado = True
-            st.session_state.user_key = chave_api.strip()
-            st.rerun()
-    st.stop()
+    chave_api = os.getenv("GOOGLE_API_KEY")
+    if not chave_api and "GOOGLE_API_KEY" in st.secrets:
+        chave_api = st.secrets["GOOGLE_API_KEY"]
+        
+    if not chave_api:
+        st.error("⚠️ Chave GOOGLE_API_KEY não configurada nos Secrets!")
+        st.stop()
+        
+    ai_client = genai.Client(api_key=chave_api)
+    return model_embedding, textos, metadados, matriz_vetores, ai_client
 
-# ==============================================================================
-# 🤖 INTERFACE PRINCIPAL DO CHAT (Acessível após inserir a chave)
-# ==============================================================================
-st.title("🧬 Robô Professor de Ciências")
-st.subheader("Tire suas dúvidas com base em nossas videoaulas!")
-st.markdown("---")
+model_embedding, lista_textos, lista_metas, matriz_vetores, ai_client = inicializar_sistema_completo()
 
 system_prompt = (
     "Você é um robô professor de ciências altamente didático, paciente e divertido.\n"
@@ -117,24 +144,20 @@ system_prompt = (
     "Se responder à pergunta usando o contexto, avise ao aluno que um link clicável e o player da aula foram disponibilizados abaixo para ele assistir."
 )
 
+# Inicializa o histórico de mensagens na tela
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Variável auxiliar para capturar cliques nos botões de atalho
 pergunta_clicada = None
 
 # ==============================================================================
-# 🧼 BARRA LATERAL (Desconectar, Atalhos, PDFs e Limpeza)
+# 🧼 BARRA LATERAL: BOTÕES DE TEXTO, PDFS E LIMPEZA
 # ==============================================================================
 with st.sidebar:
-    st.markdown("<h3 style='text-align: center; color: #2a5c4d;'>👤 Aluno Conectado</h3>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
     
-    if st.button("🚪 Trocar Chave API"):
-        st.session_state.autenticado = False
-        st.session_state.user_key = ""
-        st.session_state.messages = []
-        st.rerun()
-        
-    st.markdown("---")
+    # NOVIDADE: Lista de aulas com botões de atalho para enviar a pergunta direto
     st.markdown("### 🎥 Aulas Disponíveis")
     st.write("Clique em uma aula para perguntar ao robô:")
     for aula in AULAS_DO_CANAL:
@@ -144,23 +167,36 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### 📚 Materiais de Apoio")
     
-    caminho_pdf1 = "materiais/apostila_ciencias.pdf"
+     # Exemplo de Botão de Download 1: EBS
+    caminho_pdf1 = "materiais/Ensino_Baseado_Simulacao.pdf"
     if os.path.exists(caminho_pdf1):
         with open(caminho_pdf1, "rb") as file:
             st.download_button(
-                label="📥 Baixar Apostila Geral (PDF)",
+                label="📥 Baixar Ensino Baseado em Simulação (PDF)",
                 data=file,
-                file_name="Apostila_de_Ciencias.pdf",
+                file_name="Ensino_Baseado_Simulacao.pdf",
                 mime="application/pdf"
             )
             
-    caminho_pdf2 = "materiais/exercicios_fotossintese.pdf"
+    # Exemplo de Botão de Download 2: Partículas
+    caminho_pdf2 = "materiais/Particulas.pdf"
     if os.path.exists(caminho_pdf2):
         with open(caminho_pdf2, "rb") as file:
             st.download_button(
-                label="📝 Baixar Exercícios - Fotossíntese",
+                label="📝 Baixar Partículas",
                 data=file,
-                file_name="Exercicios_Fotossintese.pdf",
+                file_name="Particulas.pdf",
+                mime="application/pdf"
+            )
+
+    # Exemplo de Botão de Download 3: Teoria ácido-base de Lewis
+    caminho_pdf3 = "materiais/Teoria_acido_base_Lewis.pdf"
+    if os.path.exists(caminho_pdf3):
+        with open(caminho_pdf3, "rb") as file:
+            st.download_button(
+                label="📥 Teoria ácido-base de Lewis",
+                data=file,
+                file_name="Teoria_acido_base_Lewis.pdf",
                 mime="application/pdf"
             )
 
@@ -170,18 +206,22 @@ with st.sidebar:
         st.rerun()
 # ==============================================================================
 
+# Mensagem inicial de boas-vindas
 if len(st.session_state.messages) == 0:
-    st.info("👋 Escolha uma das aulas na barra lateral ou digite sua dúvida aqui embaixo. Eu vou te explicar o assunto e carregar o vídeo correspondente!")
+    st.info("👋 **Olá, cientista!** Escolha uma das aulas na barra lateral ou digite sua dúvida aqui embaixo. Eu vou te explicar o assunto e carregar o vídeo correspondente!")
 
+# Exibe as mensagens armazenadas usando avatares customizados
 for message in st.session_state.messages:
     avatar = "🧑‍🎓" if message["role"] == "user" else "🤖"
     with st.chat_message(message["role"], avatar=avatar):
         st.markdown(message["content"])
 
+# Captura a entrada: seja digitada na caixa ou clicada no atalho lateral
 caixa_entrada = st.chat_input("Digite sua dúvida aqui...")
 pergunta = caixa_entrada if caixa_entrada else pergunta_clicada
 
 if pergunta:
+    # Mensagem do Aluno
     with st.chat_message("user", avatar="🧑‍🎓"):
         st.markdown(pergunta)
     st.session_state.messages.append({"role": "user", "content": pergunta})
@@ -201,15 +241,37 @@ if pergunta:
 
     contexto_formatado = f"Conteúdo da aula: {texto_encontrado}\nLink do Vídeo: {url_para_abrir}"
 
-    # Limpeza preventiva de chaves globais do sistema antes de instanciar a IA
-    if "GOOGLE_API_KEY" in os.environ:
-        del os.environ["GOOGLE_API_KEY"]
-    if "GEMINI_API_KEY" in os.environ:
-        del os.environ["GEMINI_API_KEY"]
-
+    # Resposta do Professor
     with st.chat_message("assistant", avatar="🤖"):
         try:
-            # CORREÇÃO FOCADA: Alinhamento perfeito de 12 espaços limpos (sem abas invisíveis)
+            config_ia = types.GenerateContentConfig(
+                system_instruction=system_prompt + f"\n\nContexto:\n{contexto_formatado}",
+                temperature=0.2
+            )
+            
+            response = ai_client.models.generate_content(
+                model="gemini-3.6-flash",
+                contents=pergunta,
+                config=config_ia
+            )
+            
+            resposta_final = response.text
+            st.markdown(resposta_final)
+            
+            if url_para_abrir and "youtube.com" in url_para_abrir:
+                st.markdown(f"🔗 **[Clique aqui para abrir diretamente no YouTube]({url_para_abrir})**")
+                st.video(url_para_abrir)
+                st.success("🎬 Vídeo da aula carregado acima com sucesso!")
+                
+            st.session_state.messages.append({"role": "assistant", "content": resposta_final})
+            
+        except Exception as e:
+            st.error(f"Erro ao acionar a IA: {e}")
+            
+    # Se a pergunta veio de um botão lateral, força o recarregamento para sincronizar o chat visualmente
+    if pergunta_clicada:
+        st.rerun()
+
 
 
 
