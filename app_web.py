@@ -57,7 +57,7 @@ st.markdown("---")
 AULAS_DO_CANAL = [
     {"titulo": "🌌 O que é química?", "sugestao_pergunta": "Explique o que é química?", "texto": "Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo..", "link": "https://youtube.com"},
     {"titulo": "🌱 O que são partículas?", "sugestao_pergunta": "Quais são as partículas que formam a matéria?", "texto": "Na aula sobre partículas explicamos como são constituídos os átomos e as partículas que formam a matéria.", "link": "https://youtube.com"},
-    {"titulo": "🪐 Soluções químicas", "sugestao_pergunta": "Como se formam as soluções químicas?", "texto": "Na aula sobre soluções explicamos o que é uma solução e como ela é formada.", "link": "https://youtube.com"}
+    {"titulo": "🪐 Soluções químicas", "sugestao_pergunta": "Como se formam as soluções químicas?", "texto": "Na aula sobre soluções explicamos o que é uma solution e como ela é formada.", "link": "https://youtube.com"}
 ]
 
 @st.cache_resource
@@ -115,7 +115,7 @@ for i, message in enumerate(st.session_state.messages):
             pdf_data = gerar_pdf_resposta(st.session_state.messages[i-1]["content"], message["content"])
             st.download_button(label="📥 Baixar Resposta em PDF", data=pdf_data, file_name=f"resposta_{i}.pdf", mime="application/pdf", key=f"dl_{i}")
 
-# Fluxo de entrada do chat
+# Input de chat
 prompt_usuario = st.chat_input("Digite sua dúvida de ciências...")
 
 if prompt_usuario:
@@ -139,20 +139,24 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
         link_encontrado = lista_metas[best_idx]["source"]
         titulo_encontrado = lista_metas[best_idx]["titulo"]
 
-    prompt_final = f"{system_prompt}\n\nContexto das aulas disponíveis:\n{contexto_aulas}\n\nPergunta do Aluno: {pergunta_atual}"
+    # Monta a estrutura de conteúdo e passa a instrução do sistema usando o local correto da nova SDK
+    prompt_final = f"Contexto das aulas disponíveis:\n{contexto_aulas}\n\nPergunta do Aluno: {pergunta_atual}"
     
     with st.chat_message("assistant"):
         with st.spinner("Analisando os elementos... 🧪"):
             try:
-                # CORREÇÃO DA CHAMADA: Passa a instrução de sistema diretamente estruturada para evitar rejeição do ClientError
                 resposta = ai_client.models.generate_content(
                     model='gemini-2.5-flash',
                     contents=prompt_final,
-                    config=types.GenerateContentConfig(temperature=0.4)
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_prompt,
+                        temperature=0.4
+                    )
                 )
                 texto_resposta = resposta.text if resposta.text else "Não consegui formular uma explicação."
             except Exception as e:
-                texto_resposta = "Tive um problema de comunicação com o servidor da IA. Por favor, tente refazer a pergunta."
+                # Caso ocorra erro de permissão da chave ou restrição de região, exibe o erro exato na tela
+                texto_resposta = f"Erro na chamada da API: {str(e)}"
             
             st.markdown(texto_resposta)
             if link_encontrado:
