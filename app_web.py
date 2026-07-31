@@ -27,7 +27,6 @@ def gerar_pdf_resposta(pergunta, resposta):
     
     styles = getSampleStyleSheet()
     
-    # Estilos customizados limpos para o ReportLab
     estilo_titulo = ParagraphStyle(
         'TituloPDF',
         parent=styles['Heading1'],
@@ -59,7 +58,6 @@ def gerar_pdf_resposta(pergunta, resposta):
     story.append(Paragraph(f"<b>Dúvida do Aluno:</b> {pergunta}", estilo_pergunta))
     story.append(Spacer(1, 10))
     
-    # Divide a resposta por quebras de linha para criar parágrafos organizados no PDF
     linhas = resposta.split('\n')
     for linha in linhas:
         if linha.strip():
@@ -78,10 +76,8 @@ def get_base64_image(image_path):
             return base64.b64encode(img_file.read()).decode()
     return None
 
-# Busca a imagem 'fundo.jpg' que você subiu no seu repositório
 img_base64 = get_base64_image("fundo.jpg")
 
-# Se a imagem existir, aplica ela. Se não, aplica o degradê de segurança como plano B.
 if img_base64:
     css_fundo = f"""
     .stApp {{
@@ -99,19 +95,14 @@ else:
     }
     """
 
-# Injeta os estilos CSS finais na página web
 st.markdown(f"""
     <style>
         {css_fundo}
-
-        /* Estilização dos títulos */
         h1, h2, h3 {{
             color: #1e3d33 !important;
             font-family: 'Helvetica Neue', Arial, sans-serif;
             font-weight: 700;
         }}
-
-        /* Customização dos botões da barra lateral escura */
         .stButton>button, .stDownloadButton>button {{
             border-radius: 12px !important;
             background-color: #2a5c4d !important;
@@ -128,8 +119,6 @@ st.markdown(f"""
             transform: translateY(-2px);
             box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.1);
         }}
-
-        /* Deixa os balões de conversa com efeito vidro fosco elegante sobre a imagem */
         .stChatMessage {{
             background-color: rgba(255, 255, 255, 0.85) !important;
             border-radius: 15px !important;
@@ -141,52 +130,45 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# Cabeçalho Principal Estilizado
 st.title("🧬 Robô Professor de Ciências")
 st.markdown("---")
 
-
 # ==============================================================================
-# 🧠 CADASTRE SUAS AULAS AQUI (Texto resumido + Link limpo + Título + Sugestão)
+# 🧠 CADASTRE SUAS AULAS AQUI
 # ==============================================================================
 AULAS_DO_CANAL = [
     {
         "titulo": "🌌 O que é química?",
         "sugestao_pergunta": "Explique o que é química?",
-        "texto": " Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo..",
-        "link": " https://youtube.com "
+        "texto": "Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo..",
+        "link": "https://youtube.com"
     },
     {
         "titulo": "🌱 O que são partículas?",
         "sugestao_pergunta": "Quais são as partículas que formam a matéria?",
         "texto": "Na aula sobre partículas explicamos como são constituídos os átomos e as partículas que formam a matéria.",
-        "link": " https://youtube.com "
+        "link": "https://youtube.com"
     },
     {
         "titulo": "🪐 Soluções químicas",
         "sugestao_pergunta": "Como se formam as soluções químicas?",
-        "texto": " Na aula sobre soluções explicamos o que é uma solução e como ela é formada.",
-        "link": " https://youtube.com "
+        "texto": "Na aula sobre soluções explicamos o que é uma solução e como ela é formada.",
+        "link": "https://youtube.com"
     }
 ]
-# ==============================================================================
 
 @st.cache_resource
 def inicializar_sistema_completo():
     textos = [aula["texto"] for aula in AULAS_DO_CANAL]
     metadados = [{"source": aula["link"], "titulo": aula["titulo"]} for aula in AULAS_DO_CANAL]
-    
     model_embedding = SentenceTransformer("all-MiniLM-L6-v2")
     matriz_vetores = model_embedding.encode(textos, convert_to_numpy=True)
-    
     chave_api = os.getenv("GOOGLE_API_KEY")
     if not chave_api and "GOOGLE_API_KEY" in st.secrets:
         chave_api = st.secrets["GOOGLE_API_KEY"]
-        
     if not chave_api:
         st.error("⚠️ Chave GOOGLE_API_KEY não configurada nos Secrets!")
         st.stop()
-        
     ai_client = genai.Client(api_key=chave_api)
     return model_embedding, textos, metadados, matriz_vetores, ai_client
 
@@ -199,24 +181,21 @@ system_prompt = (
     "faça uma menção natural na sua resposta dizendo que há uma aula completa sobre esse tema gravada no canal."
 )
 
-# Inicializa o histórico de mensagens na tela
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Variável auxiliar para capturar cliques nos botões de atalho
 if "pergunta_clicada" not in st.session_state:
     st.session_state.pergunta_clicada = None
 
 # ==============================================================================
-# 🧼 BARRA LATERAL: BOTÕES DE TEXTO, PDFS E LIMPEZA
+# 🧼 BARRA LATERAL
 # ==============================================================================
 with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
-    
     st.markdown("### 🎥 Aulas Disponíveis")
     st.write("Clique em uma aula para perguntar ao robô:")
     for aula in AULAS_DO_CANAL:
-        if st.button(aula["titulo"], key=aula["titulo"]):
+        if st.button(aula["titulo"], key=f"btn_{aula['titulo']}"):
             st.session_state.pergunta_clicada = aula["sugestao_pergunta"]
             st.rerun()
 
@@ -226,39 +205,45 @@ with st.sidebar:
     caminho_pdf1 = "materiais/Ensino_Baseado_Simulacao.pdf"
     if os.path.exists(caminho_pdf1):
         with open(caminho_pdf1, "rb") as file:
-            st.download_button(
-                label="📥 Baixar Ensino Baseado em Simulação (PDF)",
-                data=file,
-                file_name="Ensino_Baseado_Simulacao.pdf",
-                mime="application/pdf"
-            )
+            st.download_button(label="📥 Baixar Ensino Baseado em Simulação (PDF)", data=file, file_name="Ensino_Baseado_Simulacao.pdf", mime="application/pdf", key="mat1")
             
     caminho_pdf2 = "materiais/Particulas.pdf"
     if os.path.exists(caminho_pdf2):
         with open(caminho_pdf2, "rb") as file:
-            st.download_button(
-                label="📝 Baixar Partículas",
-                data=file,
-                file_name="Particulas.pdf",
-                mime="application/pdf"
-            )
+            st.download_button(label="📝 Baixar Partículas", data=file, file_name="Particulas.pdf", mime="application/pdf", key="mat2")
 
     caminho_pdf3 = "materiais/Teoria_acido_base_Lewis.pdf"
     if os.path.exists(caminho_pdf3):
         with open(caminho_pdf3, "rb") as file:
-            st.download_button(
-                label="📥 Teoria ácido-base de Lewis",
-                data=file,
-                file_name="Teoria_acido_base_Lewis.pdf",
-                mime="application/pdf"
-            )
+            st.download_button(label="📥 Teoria ácido-base de Lewis", data=file, file_name="Teoria_acido_base_Lewis.pdf", mime="application/pdf", key="mat3")
 
     st.markdown("---")
-    if st.button("🗑️ Limpar Conversa (Recomeçar)"):
+    if st.button("🗑️ Limpar Conversa (Recomeçar)", key="clear_chat"):
         st.session_state.messages = []
         st.session_state.pergunta_clicada = None
         st.rerun()
-# ==============================================================================
 
-# Mensagem inicial de boas-vindas
-if len(st.session_state.messages) == 0:
+# Mensagem de boas-vindas estática (evita problemas de bloco if vazio)
+if not st.session_state.messages:
+    st.info("👋 **Olá, cientista!** Escolha uma das aulas na barra lateral ou digite sua dúvida sobre qualquer assunto de Ciências abaixo!")
+
+# Histórico de conversas
+for i, message in enumerate(st.session_state.messages):
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+        if message["role"] == "assistant":
+            if "video_link" in message and message["video_link"]:
+                st.markdown(f"🔗 **Aula recomendada:** [{message['video_titulo']}]({message['video_link']})")
+                st.video(message["video_link"])
+            pdf_data = gerar_pdf_resposta(st.session_state.messages[i-1]["content"], message["content"])
+            st.download_button(label="📥 Baixar Resposta em PDF", data=pdf_data, file_name=f"resposta_ciencias_{i}.pdf", mime="application/pdf", key=f"dl_{i}")
+
+# Input de chat
+prompt_usuario = st.chat_input("Digite sua dúvida de ciências...")
+
+if st.session_state.pergunta_clicada:
+    prompt_usuario = st.session_state.pergunta_clicada
+    st.session_state.pergunta_clicada = None
+
+if prompt_usuario:
+    with st.chat_message("user"):
