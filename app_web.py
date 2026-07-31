@@ -67,7 +67,7 @@ AULAS_DO_CANAL = [
     }
 ]
 
-# Inicializa as matrixes matemáticas de busca semântica local
+# Inicializa as matrizes matemáticas de busca semântica local
 @st.cache_resource
 def inicializar_busca_local():
     textos = [aula["texto"] for aula in AULAS_DO_CANAL]
@@ -202,11 +202,14 @@ if pergunta:
     contexto_formatado = f"Conteúdo da aula: {texto_encontrado}\nLink do Vídeo: {url_para_abrir}"
 
     # Limpeza preventiva de chaves globais do sistema antes de instanciar a IA
-    if "GOOGLE_API_KEY" in os.environ: del os.environ["GOOGLE_API_KEY"]
-    if "GEMINI_API_KEY" in os.environ: del os.environ["GEMINI_API_KEY"]
+    if "GOOGLE_API_KEY" in os.environ:
+        del os.environ["GOOGLE_API_KEY"]
+    if "GEMINI_API_KEY" in os.environ:
+        del os.environ["GEMINI_API_KEY"]
 
     with st.chat_message("assistant", avatar="🤖"):
         try:
-            # CORREÇÃO DEFINITIVA DE INDENTAÇÃO: Alinhamento perfeito de 12 espaços para todas as linhas dentro do try
+            # CORREÇÃO DEFINITIVA: Bloco indentado estritamente com espaços puros regulados pelo Python
+
 
 
