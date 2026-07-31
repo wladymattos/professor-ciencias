@@ -203,7 +203,7 @@ system_prompt = (
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Variável auxiliar para capturar cliques nos botões de atalho de forma estável
+# Variável auxiliar para capturar cliques nos botões de atalho
 if "pergunta_clicada" not in st.session_state:
     st.session_state.pergunta_clicada = None
 
@@ -218,6 +218,7 @@ with st.sidebar:
     for aula in AULAS_DO_CANAL:
         if st.button(aula["titulo"], key=aula["titulo"]):
             st.session_state.pergunta_clicada = aula["sugestao_pergunta"]
+            st.rerun()
 
     st.markdown("---")
     st.markdown("### 📚 Materiais de Apoio")
@@ -260,10 +261,4 @@ with st.sidebar:
 # ==============================================================================
 
 # Mensagem inicial de boas-vindas
-
-
-
-
-
-
-
+if len(st.session_state.messages) == 0:
