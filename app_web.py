@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 import numpy as np
-import base64  # CORREÇÃO: Importação essencial adicionada aqui
+import base64
 from sentence_transformers import SentenceTransformer
 from google import genai
 from google.genai import types
@@ -89,7 +89,6 @@ st.markdown(f"""
 st.title("🧬 Robô Professor de Ciências")
 st.markdown("---")
 
-
 # ==============================================================================
 # 🧠 CADASTRE SUAS AULAS AQUI (Texto resumido + Link limpo + Título + Sugestão)
 # ==============================================================================
@@ -97,22 +96,21 @@ AULAS_DO_CANAL = [
     {
         "titulo": "🌌 O que é química?",
         "sugestao_pergunta": "Explique o que é química?",
-        "texto": " Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo..",
-        "link": " https://www.youtube.com/watch?v=SCPEWIVOFiM&t=22s "
+        "texto": "Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo.",
+        "link": "https://www.youtube.com/watch?v=SCPEWIVOFiM"
     },
     {
         "titulo": "🌱 O que são partículas?",
         "sugestao_pergunta": "Quais são as partículas que formam a matéria?",
         "texto": "Na aula sobre partículas explicamos como são constituídos os átomos e as partículas que formam a matéria.",
-        "link": " https://www.youtube.com/watch?v=lw9nPJH2X8c "
+        "link": "https://www.youtube.com/watch?v=lw9nPJH2X8c"
     },
     {
         "titulo": "🪐 Soluções químicas",
         "sugestao_pergunta": "Como se formam as soluções químicas?",
-        "texto": " Na aula sobre soluções explicamos o que é uma solução e como ela é formada.",
-        "link": " https://www.youtube.com/watch?v=QT1osnLDjjA&t=8s "
+        "texto": "Na aula sobre soluções explicamos lo que é uma solução e como ela é formada.",
+        "link": "https://www.youtube.com/watch?v=QT1osnLDjjA"
     }
-
 ]
 # ==============================================================================
 
@@ -157,7 +155,6 @@ pergunta_clicada = None
 with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
     
-    # NOVIDADE: Lista de aulas com botões de atalho para enviar a pergunta direto
     st.markdown("### 🎥 Aulas Disponíveis")
     st.write("Clique em uma aula para perguntar ao robô:")
     for aula in AULAS_DO_CANAL:
@@ -167,7 +164,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### 📚 Materiais de Apoio")
     
-     # Exemplo de Botão de Download 1: EBS
+    # Botão de Download 1: EBS
     caminho_pdf1 = "materiais/Ensino_Baseado_Simulacao.pdf"
     if os.path.exists(caminho_pdf1):
         with open(caminho_pdf1, "rb") as file:
@@ -178,7 +175,7 @@ with st.sidebar:
                 mime="application/pdf"
             )
             
-    # Exemplo de Botão de Download 2: Partículas
+    # Botão de Download 2: Partículas
     caminho_pdf2 = "materiais/Particulas.pdf"
     if os.path.exists(caminho_pdf2):
         with open(caminho_pdf2, "rb") as file:
@@ -189,7 +186,7 @@ with st.sidebar:
                 mime="application/pdf"
             )
 
-    # Exemplo de Botão de Download 3: Teoria ácido-base de Lewis
+    # Botão de Download 3: Teoria ácido-base de Lewis
     caminho_pdf3 = "materiais/Teoria_acido_base_Lewis.pdf"
     if os.path.exists(caminho_pdf3):
         with open(caminho_pdf3, "rb") as file:
@@ -210,18 +207,17 @@ with st.sidebar:
 if len(st.session_state.messages) == 0:
     st.info("👋 **Olá, cientista!** Escolha uma das aulas na barra lateral ou digite sua dúvida aqui embaixo. Eu vou te explicar o assunto e carregar o vídeo correspondente!")
 
-# Exibe as mensagens armazenadas usando avatares customizados
+# Exibe o histórico de mensagens
 for message in st.session_state.messages:
     avatar = "🧑‍🎓" if message["role"] == "user" else "🤖"
     with st.chat_message(message["role"], avatar=avatar):
         st.markdown(message["content"])
 
-# Captura a entrada: seja digitada na caixa ou clicada no atalho lateral
+# Caixa de chat principal
 caixa_entrada = st.chat_input("Digite sua dúvida aqui...")
 pergunta = caixa_entrada if caixa_entrada else pergunta_clicada
 
 if pergunta:
-    # Mensagem do Aluno
     with st.chat_message("user", avatar="🧑‍🎓"):
         st.markdown(pergunta)
     st.session_state.messages.append({"role": "user", "content": pergunta})
@@ -241,7 +237,6 @@ if pergunta:
 
     contexto_formatado = f"Conteúdo da aula: {texto_encontrado}\nLink do Vídeo: {url_para_abrir}"
 
-    # Resposta do Professor
     with st.chat_message("assistant", avatar="🤖"):
         try:
             config_ia = types.GenerateContentConfig(
@@ -249,8 +244,9 @@ if pergunta:
                 temperature=0.2
             )
             
+            # Modelo padrão atual e suportado na biblioteca moderna genai
             response = ai_client.models.generate_content(
-                model="gemini-3.6-flash",
+                model="gemini-2.5-flash",
                 contents=pergunta,
                 config=config_ia
             )
@@ -259,18 +255,7 @@ if pergunta:
             st.markdown(resposta_final)
             
             if url_para_abrir and "youtube.com" in url_para_abrir:
-                st.markdown(f"🔗 **[Clique aqui para abrir diretamente no YouTube]({url_para_abrir})**")
-                st.video(url_para_abrir)
-                st.success("🎬 Vídeo da aula carregado acima com sucesso!")
-                
-            st.session_state.messages.append({"role": "assistant", "content": resposta_final})
-            
-        except Exception as e:
-            st.error(f"Erro ao acionar a IA: {e}")
-            
-    # Se a pergunta veio de um botão lateral, força o recarregamento para sincronizar o chat visualmente
-    if pergunta_clicada:
-        st.rerun()
+
 
 
 
