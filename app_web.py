@@ -223,7 +223,7 @@ with st.sidebar:
         st.session_state.pergunta_clicada = None
         st.rerun()
 
-# Mensagem de boas-vindas estática (evita problemas de bloco if vazio)
+# Mensagem de boas-vindas estática
 if not st.session_state.messages:
     st.info("👋 **Olá, cientista!** Escolha uma das aulas na barra lateral ou digite sua dúvida sobre qualquer assunto de Ciências abaixo!")
 
@@ -247,3 +247,4 @@ if st.session_state.pergunta_clicada:
 
 if prompt_usuario:
     with st.chat_message("user"):
+        st.markdown(prompt_usuario)
