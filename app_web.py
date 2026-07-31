@@ -152,7 +152,7 @@ AULAS_DO_CANAL = [
     {
         "titulo": "🪐 Soluções químicas",
         "sugestao_pergunta": "Como se formam as soluções químicas?",
-        "texto": "Na aula sobre soluções explicamos o que é uma solução e como ela é formada.",
+        "texto": "Na aula sobre soluções explicamos o que é uma solution e como ela é formada.",
         "link": "https://youtube.com"
     }
 ]
