@@ -1,4 +1,5 @@
 import os
+import json
 import streamlit as st
 import numpy as np
 import base64
@@ -54,7 +55,17 @@ st.markdown(f"<style>{css_fundo} h1, h2, h3 {{ color: #1e3d33 !important; }} .st
 st.title("🧬 Robô Professor de Ciências")
 st.markdown("---")
 
-AULAS_DO_CANAL = [
+# ==============================================================================
+# 📂 CARREGAMENTO DINÂMICO DOS VÍDEOS (JSON) E MATERIAIS (PASTA)
+# ==============================================================================
+JSON_PATH = "config_aulas.json"
+
+# Se o arquivo JSON não existir no GitHub, ele usa uma lista padrão de segurança
+if os.path.exists(JSON_PATH):
+    with open(JSON_PATH, "r", encoding="utf-8") as f:
+        AULAS_DO_CANAL = json.load(f)
+else:
+    AULAS_DO_CANAL = [
     {
         "titulo": "🌌 O que é química?",
         "sugestao_pergunta": "Explique o que é química?",
@@ -73,7 +84,8 @@ AULAS_DO_CANAL = [
         "texto": " Na aula sobre soluções explicamos o que é uma solução e como ela é formada.",
         "link": " https://www.youtube.com/watch?v=QT1osnLDjjA&t=8s "
     }
-]
+
+    ]
 
 @st.cache_resource
 def inicializar_sistema_completo():
@@ -81,7 +93,6 @@ def inicializar_sistema_completo():
     if not chave_api:
         st.error("⚠️ Chave GOOGLE_API_KEY não configurada nos Secrets!")
         st.stop()
-    # Adicionando explicitamente a versão de API estável recomendada pelo Google para evitar conflitos de rota v1beta
     return genai.Client(api_key=chave_api, http_options={'api_version': 'v1'})
 
 ai_client = inicializar_sistema_completo()
@@ -96,21 +107,41 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # ==============================================================================
-# 🧼 BARRA LATERAL METODOLOGIA DOWNLOAD
+# 🧼 BARRA LATERAL AUTOMATIZADA
 # ==============================================================================
 with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
     
+    # 🎥 Gerado automaticamente a partir do arquivo JSON externo
     st.markdown("### 🎥 Assistir Aulas no Canal")
     for i, aula in enumerate(AULAS_DO_CANAL):
         st.link_button(label=f"▶️ {aula['titulo']}", url=aula['link'].strip(), key=f"link_aula_{i}")
 
     st.markdown("---")
+    
+    # 📚 LEITURA DINÂMICA DA PASTA DE MATERIAIS
     st.markdown("### 📚 Materiais de Apoio")
-    for i, caminho in enumerate(["materiais/Ensino_Baseado_Simulacao.pdf", "materiais/Particulas.pdf", "materiais/Teoria_acido_base_Lewis.pdf"]):
-        if os.path.exists(caminho):
-            with open(caminho, "rb") as file:
-                st.download_button(label=f"📥 Baixar Material {i+1}", data=file, file_name=os.path.basename(caminho), mime="application/pdf", key=f"mat_{i}")
+    PASTA_MATERIAIS = "materiais"
+    
+    if os.path.exists(PASTA_MATERIAIS):
+        arquivos = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
+        if arquivos:
+            for i, nome_arquivo in enumerate(arquivos):
+                caminho_completo = os.path.join(PASTA_MATERIAIS, nome_arquivo)
+                # Remove a extensão do nome para exibir um rótulo amigável no botão
+                nome_exibicao = nome_arquivo.replace('.pdf', '').replace('_', ' ')
+                with open(caminho_completo, "rb") as file:
+                    st.download_button(
+                        label=f"📥 Baixar {nome_exibicao}", 
+                        data=file, 
+                        file_name=nome_arquivo, 
+                        mime="application/pdf", 
+                        key=f"mat_dinamico_{i}"
+                    )
+        else:
+            st.write("Nenhuma apostila disponível no momento.")
+    else:
+        st.write("Pasta de materiais não encontrada.")
 
     st.markdown("---")
     if st.button("🗑️ Limpar Conversa", key="clear_chat"):
@@ -142,7 +173,6 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     with st.chat_message("assistant"):
         with st.spinner("Analisando os elementos... 🧪"):
             try:
-                # MODELO ATUALIZADO E HOMOLOGADO PELA SDK PARA EVITAR 404
                 resposta = ai_client.models.generate_content(
                     model='gemini-3.6-flash',
                     contents=pergunta_atual,
