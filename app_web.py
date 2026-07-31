@@ -209,7 +209,7 @@ if pergunta:
 
     with st.chat_message("assistant", avatar="🤖"):
         try:
-            # CORREÇÃO DEFINITIVA: Bloco indentado estritamente com espaços puros regulados pelo Python
+            # CORREÇÃO FOCADA: Alinhamento perfeito de 12 espaços limpos (sem abas invisíveis)
 
 
 
