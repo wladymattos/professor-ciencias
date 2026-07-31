@@ -75,10 +75,9 @@ def inicializar_sistema_completo():
 model_embedding, lista_textos, lista_metas, matriz_vetores, ai_client = inicializar_sistema_completo()
 
 system_prompt = (
-    "Você é um robô professor de ciências altamente didático, paciente e divertido. "
-    "Responda a qualquer dúvida ou conceito de ciências que o aluno trouxer da forma mais clara e educativa possível. "
-    "Caso o contexto das nossas aulas fornecido abaixo seja diretamente relevante para o tema da pergunta, "
-    "faça uma menção natural na sua resposta dizendo que há uma aula completa sobre esse tema gravada no canal."
+    "Você é um robô professor de ciências didático e divertido. "
+    "Responda a qualquer dúvida ou conceito de ciências do aluno de forma clara. "
+    "Mencione se há uma aula completa sobre o tema gravada no canal caso o contexto fornecido abaixo seja diretamente relevante."
 )
 
 if "messages" not in st.session_state:
@@ -105,7 +104,7 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
-# Exibe o histórico de mensagens de forma direta na tela
+# Exibe o histórico de mensagens
 for i, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
@@ -116,7 +115,7 @@ for i, message in enumerate(st.session_state.messages):
             pdf_data = gerar_pdf_resposta(st.session_state.messages[i-1]["content"], message["content"])
             st.download_button(label="📥 Baixar Resposta em PDF", data=pdf_data, file_name=f"resposta_{i}.pdf", mime="application/pdf", key=f"dl_{i}")
 
-# Fluxo de entrada do chat unificado e sem blocos aninhados que causam erro de indentação
+# Fluxo de entrada do chat
 prompt_usuario = st.chat_input("Digite sua dúvida de ciências...")
 
 if prompt_usuario:
@@ -140,16 +139,20 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
         link_encontrado = lista_metas[best_idx]["source"]
         titulo_encontrado = lista_metas[best_idx]["titulo"]
 
-    prompt_final = f"Contexto interno de nossas produções:\n{contexto_aulas}\n\nDúvida livre do Aluno: {pergunta_atual}"
+    prompt_final = f"{system_prompt}\n\nContexto das aulas disponíveis:\n{contexto_aulas}\n\nPergunta do Aluno: {pergunta_atual}"
     
     with st.chat_message("assistant"):
         with st.spinner("Analisando os elementos... 🧪"):
-            resposta = ai_client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=prompt_final,
-                config=types.GenerateContentConfig(system_instruction=system_prompt, temperature=0.4)
-            )
-            texto_resposta = resposta.text if resposta.text else "Não consegui formular uma explicação."
+            try:
+                # CORREÇÃO DA CHAMADA: Passa a instrução de sistema diretamente estruturada para evitar rejeição do ClientError
+                resposta = ai_client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=prompt_final,
+                    config=types.GenerateContentConfig(temperature=0.4)
+                )
+                texto_resposta = resposta.text if resposta.text else "Não consegui formular uma explicação."
+            except Exception as e:
+                texto_resposta = "Tive um problema de comunicação com o servidor da IA. Por favor, tente refazer a pergunta."
             
             st.markdown(texto_resposta)
             if link_encontrado:
