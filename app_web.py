@@ -262,3 +262,4 @@ with st.sidebar:
 
 # Mensagem inicial de boas-vindas
 if len(st.session_state.messages) == 0:
+
