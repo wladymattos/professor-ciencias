@@ -113,7 +113,6 @@ for i, message in enumerate(st.session_state.messages):
                 st.markdown(f"🔗 **Aula recomendada:** [{message['video_titulo']}]({message['video_link']})")
                 st.video(message["video_link"])
             pdf_data = gerar_pdf_resposta(st.session_state.messages[i-1]["content"], message["content"])
-            # CORREÇÃO CRUCIAL AQUI: Parâmetros corrigidos sem duplicação de sintaxe
             st.download_button(label="📥 Baixar Resposta em PDF", data=pdf_data, file_name=f"resposta_{i}.pdf", mime="application/pdf", key=f"dl_{i}")
 
 # Input de chat
@@ -145,18 +144,17 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     with st.chat_message("assistant"):
         with st.spinner("Analisando os elementos... 🧪"):
             try:
-                # MODELO CORRIGIDO PARA O ENDPOINT ESTÁVEL DA NOVA SDK
+                # CORREÇÃO: Utilizando o modelo oficial atualizado gemini-3.6-flash e removendo parâmetros depreciados
                 resposta = ai_client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-3.6-flash',
                     contents=prompt_final,
                     config=types.GenerateContentConfig(
-                        system_instruction=system_prompt,
-                        temperature=0.4
+                        system_instruction=system_prompt
                     )
                 )
                 texto_resposta = resposta.text if resposta.text else "Não consegui formular uma explicação."
             except Exception as e:
-                texto_resposta = f"Erro na chamada da API: {str(e)}"
+                texto_resposta = f"Erro na chamada da API com o modelo estável: {str(e)}"
             
             st.markdown(texto_resposta)
             if link_encontrado:
