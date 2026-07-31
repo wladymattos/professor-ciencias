@@ -81,7 +81,8 @@ def inicializar_sistema_completo():
     if not chave_api:
         st.error("⚠️ Chave GOOGLE_API_KEY não configurada nos Secrets!")
         st.stop()
-    return genai.Client(api_key=chave_api)
+    # Adicionando explicitamente a versão de API estável recomendada pelo Google para evitar conflitos de rota v1beta
+    return genai.Client(api_key=chave_api, http_options={'api_version': 'v1'})
 
 ai_client = inicializar_sistema_completo()
 
@@ -141,9 +142,9 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     with st.chat_message("assistant"):
         with st.spinner("Analisando os elementos... 🧪"):
             try:
-                # MODELO CORRIGIDO EM DEFINITIVO PARA GEMINI-1.5-FLASH
+                # MODELO ATUALIZADO E HOMOLOGADO PELA SDK PARA EVITAR 404
                 resposta = ai_client.models.generate_content(
-                    model='gemini-1.5-flash',
+                    model='gemini-3.6-flash',
                     contents=pergunta_atual,
                     config=types.GenerateContentConfig(
                         system_instruction=system_prompt
