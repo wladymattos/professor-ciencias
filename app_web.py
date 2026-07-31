@@ -48,22 +48,22 @@ st.markdown(f"""
 # ==============================================================================
 AULAS_DO_CANAL = [
     {
-        "titulo": "🌌 O que é química?",
-        "sugestao_pergunta": "Explique o que é química?",
-        "texto": " Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo..",
-        "link": " https://www.youtube.com/watch?v=SCPEWIVOFiM&t=22s "
+        "titulo": "🌌 Por que o céu é azul?",
+        "sugestao_pergunta": "Por que a cor do céu é azul?",
+        "texto": "Na aula sobre a Cor do Céu, explicamos que ele é azul por causa da dispersão da luz solar na atmosfera terrestre. A luz azul possui ondas mais curtas e se espalha muito mais do que as outras cores quando se choca com os gases do ar. Isso é conhecido fisicamente como Dispersão de Rayleigh.",
+        "link": "https://youtube.com"
     },
     {
-        "titulo": "🌱 O que são partículas?",
-        "sugestao_pergunta": "Quais são as partículas que formam a matéria?",
-        "texto": "Na aula sobre partículas explicamos como são constituídos os átomos e as partículas que formam a matéria.",
-        "link": " https://www.youtube.com/watch?v=lw9nPJH2X8c "
+        "titulo": "🌱 Como funciona a Fotossíntese?",
+        "sugestao_pergunta": "Como as plantas fazem fotossíntese?",
+        "texto": "Na aula sobre a Fotossíntese, explicamos que as plantas usam a luz do Sol, a água que absorvem pelas raízes e o gás carbônico do ar para produzir glicose (seu alimento) e liberar oxigênio puro de volta para a atmosfera. A clorofila é a responsável por captar essa luz solar e dá a cor verde às folhas.",
+        "link": "https://youtube.com"
     },
     {
-        "titulo": "🪐 Soluções químicas",
-        "sugestao_pergunta": "Como se formam as soluções químicas?",
-        "texto": " Na aula sobre soluções explicamos o que é uma solução e como ela é formada.",
-        "link": " https://www.youtube.com/watch?v=QT1osnLDjjA&t=8s "
+        "titulo": "🪐 O Sistema Solar",
+        "sugestao_pergunta": "Quais são os planetas do sistema solar?",
+        "texto": "Na aula sobre o Sistema Solar, explicamos que o Sol fica no centro e oito planetas giram ao seu redor. Os quatro mais próximos são rochosos (Mercúrio, Vênus, Terra e Marte) e os quatro mais distantes são gigantes gasosos (Júpiter, Saturno, Urano e Netuno).",
+        "link": "https://youtube.com"
     }
 ]
 
@@ -144,36 +144,23 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### 📚 Materiais de Apoio")
     
-     # Exemplo de Botão de Download 1: EBS
-    caminho_pdf1 = "materiais/Ensino_Baseado_Simulacao.pdf"
+    caminho_pdf1 = "materiais/apostila_ciencias.pdf"
     if os.path.exists(caminho_pdf1):
         with open(caminho_pdf1, "rb") as file:
             st.download_button(
-                label="📥 Baixar Ensino Baseado em Simulação (PDF)",
+                label="📥 Baixar Apostila Geral (PDF)",
                 data=file,
-                file_name="Ensino_Baseado_Simulacao.pdf",
+                file_name="Apostila_de_Ciencias.pdf",
                 mime="application/pdf"
             )
             
-    # Exemplo de Botão de Download 2: Partículas
-    caminho_pdf2 = "materiais/Particulas.pdf"
+    caminho_pdf2 = "materiais/exercicios_fotossintese.pdf"
     if os.path.exists(caminho_pdf2):
         with open(caminho_pdf2, "rb") as file:
             st.download_button(
-                label="📝 Baixar Partículas",
+                label="📝 Baixar Exercícios - Fotossíntese",
                 data=file,
-                file_name="Particulas.pdf",
-                mime="application/pdf"
-            )
-
-    # Exemplo de Botão de Download 3: Teoria ácido-base de Lewis
-    caminho_pdf3 = "materiais/Teoria_acido_base_Lewis.pdf"
-    if os.path.exists(caminho_pdf3):
-        with open(caminho_pdf3, "rb") as file:
-            st.download_button(
-                label="📥 Teoria ácido-base de Lewis",
-                data=file,
-                file_name="Teoria_acido_base_Lewis.pdf",
+                file_name="Exercicios_Fotossintese.pdf",
                 mime="application/pdf"
             )
 
@@ -214,10 +201,11 @@ if pergunta:
 
     contexto_formatado = f"Conteúdo da aula: {texto_encontrado}\nLink do Vídeo: {url_para_abrir}"
 
+    # CORREÇÃO FOCADA: Limpeza executada ANTES de abrir o bloco try da geração de conteúdo
+    if "GOOGLE_API_KEY" in os.environ: del os.environ["GOOGLE_API_KEY"]
+    if "GEMINI_API_KEY" in os.environ: del os.environ["GEMINI_API_KEY"]
+
     with st.chat_message("assistant", avatar="🤖"):
         try:
-            # LIMPEZA DE AMBIENTE: Remove chaves fantasmas antigas do servidor
-            if "GOOGLE_API_KEY" in os.environ: del os.environ["GOOGLE_API_KEY"]
-            if "GEMINI_API_KEY" in os.environ: del os.environ["GEMINI_API_KEY"]
-            
             # Inicializa a biblioteca oficial usando EXCLUSIVAMENTE a chave digitada pelo usuário
+
