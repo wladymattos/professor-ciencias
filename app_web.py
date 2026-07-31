@@ -227,7 +227,7 @@ with st.sidebar:
 if not st.session_state.messages:
     st.info("👋 **Olá, cientista!** Escolha uma das aulas na barra lateral ou digite sua dúvida sobre qualquer assunto de Ciências abaixo!")
 
-# Histórico de conversas
+# Histórico de conversas (Renderização síncrona estável)
 for i, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
@@ -246,5 +246,3 @@ if st.session_state.pergunta_clicada:
     st.session_state.pergunta_clicada = None
 
 if prompt_usuario:
-    with st.chat_message("user"):
-        st.markdown(prompt_usuario)
