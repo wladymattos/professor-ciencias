@@ -153,7 +153,7 @@ AULAS_DO_CANAL = [
     {
         "titulo": "🌌 O que é química?",
         "sugestao_pergunta": "Explique o que é química?",
-        "texto": " Na aula sobre o que é química, apresentamos a química como responsible pela composição de tudo que se conhece no mundo..",
+        "texto": " Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo..",
         "link": " https://youtube.com "
     },
     {
@@ -262,4 +262,3 @@ with st.sidebar:
 
 # Mensagem inicial de boas-vindas
 if len(st.session_state.messages) == 0:
-
