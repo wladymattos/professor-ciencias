@@ -54,12 +54,27 @@ st.markdown(f"<style>{css_fundo} h1, h2, h3 {{ color: #1e3d33 !important; }} .st
 st.title("🧬 Robô Professor de Ciências")
 st.markdown("---")
 
+# CORREÇÃO CRUCIAL: URLs limpas sem espaços no início ou no fim
 AULAS_DO_CANAL = [
-    {"titulo": "🌌 Aula: O que é química?", "link": "https://youtube.com /watch?v=SCPEWIVOFiM&t=14s"},
-    {"titulo": "🌱 Aula: O que são partículas?", "link": "https://youtube.com /watch?v=lw9nPJH2X8c&t=1s"},
-    {"titulo": "🪐 Aula: Soluções químicas", "link": "https://youtube.com /watch?v=QT1osnLDjjA&t=14s"}
+    {
+        "titulo": "🌌 O que é química?",
+        "sugestao_pergunta": "Explique o que é química?",
+        "texto": " Na aula sobre o que é química, apresentamos a química como responsável pela composição de tudo que se conhece no mundo..",
+        "link": " https://www.youtube.com/watch?v=SCPEWIVOFiM&t=22s "
+    },
+    {
+        "titulo": "🌱 O que são partículas?",
+        "sugestao_pergunta": "Quais são as partículas que formam a matéria?",
+        "texto": "Na aula sobre partículas explicamos como são constituídos os átomos e as partículas que formam a matéria.",
+        "link": " https://www.youtube.com/watch?v=lw9nPJH2X8c "
+    },
+    {
+        "titulo": "🪐 Soluções químicas",
+        "sugestao_pergunta": "Como se formam as soluções químicas?",
+        "texto": " Na aula sobre soluções explicamos o que é uma solução e como ela é formada.",
+        "link": " https://www.youtube.com/watch?v=QT1osnLDjjA&t=8s "
+    }
 ]
-
 @st.cache_resource
 def inicializar_sistema_completo():
     chave_api = os.getenv("GOOGLE_API_KEY") or st.secrets.get("GOOGLE_API_KEY")
@@ -85,10 +100,10 @@ if "messages" not in st.session_state:
 with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
     
-    # Links das Aulas como Botões de Acesso Direto (Estilo Material de Apoio)
+    # Links das Aulas como Botões de Acesso Direto limpos de espaços
     st.markdown("### 🎥 Assistir Aulas no Canal")
     for i, aula in enumerate(AULAS_DO_CANAL):
-        st.link_button(label=f"▶️ {aula['titulo']}", url=aula['link'], key=f"link_aula_{i}")
+        st.link_button(label=f"▶️ {aula['titulo']}", url=aula['link'].strip(), key=f"link_aula_{i}")
 
     st.markdown("---")
     st.markdown("### 📚 Materiais de Apoio")
@@ -106,7 +121,7 @@ with st.sidebar:
 if not st.session_state.messages:
     st.info("👋 **Olá, cientista!** Utilize a barra lateral para acessar as aulas e materiais ou digite sua dúvida sobre qualquer assunto de Ciências abaixo!")
 
-# Histórico de conversas limpo (Apenas Chat + PDF)
+# Histórico de conversas
 for i, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
@@ -125,10 +140,10 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     pergunta_atual = st.session_state.messages[-1]["content"]
     
     with st.chat_message("assistant"):
-        with st.spinner("Analisando os elementos... 🧪"):
+        with st.spinner("Analisando os elements... 🧪"):
             try:
                 resposta = ai_client.models.generate_content(
-                    model='gemini-3.6-flash',
+                    model='gemini-2.5-flash',
                     contents=pergunta_atual,
                     config=types.GenerateContentConfig(
                         system_instruction=system_prompt
