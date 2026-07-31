@@ -74,10 +74,13 @@ def inicializar_sistema_completo():
 
 model_embedding, lista_textos, lista_metas, matriz_vetores, ai_client = inicializar_sistema_completo()
 
+# MODIFICAÇÃO DO PROMPT: Instrução explícita para NÃO inventar links ou sugerir outros vídeos
 system_prompt = (
     "Você é um robô professor de ciências didático e divertido. "
     "Responda a qualquer dúvida ou conceito de ciências do aluno de forma clara. "
-    "Mencione se há uma aula completa sobre o tema gravada no canal caso o contexto fornecido abaixo seja diretamente relevante."
+    "Não recomende vídeos externos do YouTube ou links que não sejam as aulas internas cadastradas no contexto. "
+    "Se o contexto fornecido abaixo indicar que temos uma aula gravada exatamente sobre este tema, mencione isso animadamente. "
+    "Caso contrário, apenas dê a explicação científica sem citar ou recomendar vídeos."
 )
 
 if "messages" not in st.session_state:
@@ -134,17 +137,17 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     titulo_encontrado = None
     contexto_aulas = ""
     
+    # Ativa o vídeo cadastrado apenas se a similaridade for alta com os seus textos
     if scores[best_idx] >= 0.38:
         contexto_aulas = lista_textos[best_idx]
         link_encontrado = lista_metas[best_idx]["source"]
         titulo_encontrado = lista_metas[best_idx]["titulo"]
 
-    prompt_final = f"Contexto das aulas disponíveis:\n{contexto_aulas}\n\nPergunta do Aluno: {pergunta_atual}"
+    prompt_final = f"Contexto das nossas aulas gravadas:\n{contexto_aulas}\n\nPergunta do Aluno: {pergunta_atual}"
     
     with st.chat_message("assistant"):
         with st.spinner("Analisando os elementos... 🧪"):
             try:
-                # CORREÇÃO: Utilizando o modelo oficial atualizado gemini-3.6-flash e removendo parâmetros depreciados
                 resposta = ai_client.models.generate_content(
                     model='gemini-3.6-flash',
                     contents=prompt_final,
