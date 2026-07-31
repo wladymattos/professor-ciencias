@@ -192,7 +192,6 @@ def inicializar_sistema_completo():
 
 model_embedding, lista_textos, lista_metas, matriz_vetores, ai_client = inicializar_sistema_completo()
 
-# Mudança de Prompt: Ele agora responde tudo, mas avisa sobre os vídeos se fizerem sentido
 system_prompt = (
     "Você é um robô professor de ciências altamente didático, paciente e divertido.\n"
     "Responda a qualquer dúvida ou conceito de ciências que o aluno trouxer da forma mais clara e educativa possível.\n"
@@ -204,7 +203,7 @@ system_prompt = (
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Variável auxiliar para capturar cliques nos botões de atalho
+# Variável auxiliar para capturar cliques nos botões de atalho de forma estável
 if "pergunta_clicada" not in st.session_state:
     st.session_state.pergunta_clicada = None
 
@@ -219,7 +218,6 @@ with st.sidebar:
     for aula in AULAS_DO_CANAL:
         if st.button(aula["titulo"], key=aula["titulo"]):
             st.session_state.pergunta_clicada = aula["sugestao_pergunta"]
-            st.rerun()
 
     st.markdown("---")
     st.markdown("### 📚 Materiais de Apoio")
@@ -261,6 +259,7 @@ with st.sidebar:
         st.rerun()
 # ==============================================================================
 
+# Mensagem inicial de boas-vindas
 
 
 
