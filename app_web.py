@@ -74,13 +74,12 @@ def inicializar_sistema_completo():
 
 model_embedding, lista_textos, lista_metas, matriz_vetores, ai_client = inicializar_sistema_completo()
 
-# MODIFICAÇÃO DO PROMPT: Instrução explícita para NÃO inventar links ou sugerir outros vídeos
 system_prompt = (
     "Você é um robô professor de ciências didático e divertido. "
     "Responda a qualquer dúvida ou conceito de ciências do aluno de forma clara. "
-    "Não recomende vídeos externos do YouTube ou links que não sejam as aulas internas cadastradas no contexto. "
-    "Se o contexto fornecido abaixo indicar que temos uma aula gravada exatamente sobre este tema, mencione isso animadamente. "
-    "Caso contrário, apenas dê a explicação científica sem citar ou recomendar vídeos."
+    "Não crie links fictícios ou recomende outros canais ou vídeos externos. "
+    "Se e somente se o bloco de dados fornecido abaixo contiver informações diretamente ligadas ao tema exato perguntado, "
+    "mencione no corpo de texto que o aluno possui acesso a uma aula gravada."
 )
 
 if "messages" not in st.session_state:
@@ -127,8 +126,9 @@ if prompt_usuario:
 
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
     pergunta_atual = st.session_state.messages[-1]["content"]
+    pergunta_lower = pergunta_atual.lower()
     
-    # Busca por similaridade
+    # Busca por similaridade vetorial
     vetor_pergunta = model_embedding.encode(pergunta_atual, convert_to_numpy=True)
     scores = np.dot(matriz_vetores, vetor_pergunta) / (np.linalg.norm(matriz_vetores, axis=1) * np.linalg.norm(vetor_pergunta))
     best_idx = np.argmax(scores)
@@ -137,13 +137,16 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     titulo_encontrado = None
     contexto_aulas = ""
     
-    # Ativa o vídeo cadastrado apenas se a similaridade for alta com os seus textos
-    if scores[best_idx] >= 0.38:
+    # MODIFICAÇÃO DE CONTROLE EXTREMO: Aumentado para 0.58 + Validação obrigatória de termos
+    palavras_chave = ["química", "quimica", "partícula", "particula", "átomo", "atomo", "solução", "solucao", "mistura"]
+    contem_termo = any(termo in pergunta_lower for termo in palavras_chave)
+    
+    if scores[best_idx] >= 0.58 and contem_termo:
         contexto_aulas = lista_textos[best_idx]
         link_encontrado = lista_metas[best_idx]["source"]
         titulo_encontrado = lista_metas[best_idx]["titulo"]
 
-    prompt_final = f"Contexto das nossas aulas gravadas:\n{contexto_aulas}\n\nPergunta do Aluno: {pergunta_atual}"
+    prompt_final = f"Contexto interno de nossas produções:\n{contexto_aulas}\n\nDúvida livre do Aluno: {pergunta_atual}"
     
     with st.chat_message("assistant"):
         with st.spinner("Analisando os elementos... 🧪"):
