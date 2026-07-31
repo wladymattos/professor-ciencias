@@ -1,9 +1,7 @@
-streamlit
+reportlab
 sentence-transformers
-google-genai
-python-dotenv
-langchain-community
-youtube-transcript-api
 numpy
+google-genai
+streamlit
 
 
