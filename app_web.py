@@ -54,7 +54,6 @@ st.markdown(f"<style>{css_fundo} h1, h2, h3 {{ color: #1e3d33 !important; }} .st
 st.title("🧬 Robô Professor de Ciências")
 st.markdown("---")
 
-# CORREÇÃO CRUCIAL: URLs limpas sem espaços no início ou no fim
 AULAS_DO_CANAL = [
     {
         "titulo": "🌌 O que é química?",
@@ -75,6 +74,7 @@ AULAS_DO_CANAL = [
         "link": " https://www.youtube.com/watch?v=QT1osnLDjjA&t=8s "
     }
 ]
+
 @st.cache_resource
 def inicializar_sistema_completo():
     chave_api = os.getenv("GOOGLE_API_KEY") or st.secrets.get("GOOGLE_API_KEY")
@@ -100,7 +100,6 @@ if "messages" not in st.session_state:
 with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
     
-    # Links das Aulas como Botões de Acesso Direto limpos de espaços
     st.markdown("### 🎥 Assistir Aulas no Canal")
     for i, aula in enumerate(AULAS_DO_CANAL):
         st.link_button(label=f"▶️ {aula['titulo']}", url=aula['link'].strip(), key=f"link_aula_{i}")
@@ -140,10 +139,11 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     pergunta_atual = st.session_state.messages[-1]["content"]
     
     with st.chat_message("assistant"):
-        with st.spinner("Analisando os elements... 🧪"):
+        with st.spinner("Analisando os elementos... 🧪"):
             try:
+                # MODELO CORRIGIDO EM DEFINITIVO PARA GEMINI-1.5-FLASH
                 resposta = ai_client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-1.5-flash',
                     contents=pergunta_atual,
                     config=types.GenerateContentConfig(
                         system_instruction=system_prompt
