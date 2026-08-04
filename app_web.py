@@ -110,79 +110,83 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # ==============================================================================
-# 🧼 BARRA LATERAL: SELEÇÃO DE AMBIENTE FIXA E ESTÁVEL
+# 🧼 BARRA LATERAL FIXA DO ALUNO + GERENCIADOR ISOLADO NO FINAL
 # ==============================================================================
 with st.sidebar:
-    st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Menu de Navegação</h2>", unsafe_allow_html=True)
-    opcao_tela = st.radio("Selecione o painel:", ["Área de Perguntas (Aluno)", "⚙️ Painel de Controle (Professor)"])
-
-    if opcao_tela == "Área de Perguntas (Aluno)":
-        st.markdown("---")
-        st.markdown("### 🎥 Assistir Aulas no Canal")
-        for i, aula in enumerate(AULAS_DO_CANAL):
-            st.link_button(label=f"▶️ {aula['titulo']}", url=aula['link'].strip(), key=f"link_aula_{i}")
-
-        st.markdown("---")
-        st.markdown("### 📚 Materiais de Apoio")
-        if os.path.exists(PASTA_MATERIAIS):
-            arquivos = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
-            for i, nome_arquivo in enumerate(arquivos):
-                with open(os.path.join(PASTA_MATERIAIS, nome_arquivo), "rb") as file:
-                    st.download_button(label=f"📥 Baixar {nome_arquivo.replace('.pdf', '')}", data=file, file_name=nome_arquivo, mime="application/pdf", key=f"mat_dinamico_{i}")
-
-        st.markdown("---")
-        if st.button("🗑️ Limpar Conversa", key="clear_chat"):
-            st.session_state.messages = []
-            st.rerun()
-
-# ==============================================================================
-# ⚙️ TELA EXCLUSIVA DO PROFESSOR (SÓ EXIBE SE SELECIONADA NO RADIO)
-# ==============================================================================
-if opcao_tela == "⚙️ Painel de Controle (Professor)":
-    st.markdown("## ⚙️ Gerenciador de Conteúdo Sem GitHub")
-    senha = st.text_input("Insira a senha mestra para gerenciar:", type="password", key="admin_password_field")
+    st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
     
-    if senha == ADMIN_PASSWORD:
-        st.success("Acesso Autorizado!")
-        
-        st.markdown("### 📑 Adicionar ou Remover Apostilas (PDFs)")
-        upload_pdf = st.file_uploader("Arraste uma nova apostila PDF aqui:", type=["pdf"])
-        if upload_pdf is not None and st.button("Salvar Apostila no Sistema"):
-            if enviar_arquivo_github(f"materiais/{upload_pdf.name}", upload_pdf.getvalue(), f"Adicionando {upload_pdf.name}"):
-                st.success("Apostila salva com sucesso!")
-                st.rerun()
-                
-        if os.path.exists(PASTA_MATERIAIS):
-            arquivos_deletar = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
-            if arquivos_deletar:
-                arq_selecionado = st.selectbox("Selecione um material para apagar:", arquivos_deletar)
-                if st.button("❌ EXCLUIR MATERIAL SELECIONADO", type="primary"):
-                    if deletar_arquivo_github(f"materiais/{arq_selecionado}", f"Deletando {arq_selecionado}"):
-                        st.success("Removido!")
-                        st.rerun()
+    st.markdown("### 🎥 Assistir Aulas no Canal")
+    for i, aula in enumerate(AULAS_DO_CANAL):
+        st.link_button(label=f"▶️ {aula['titulo']}", url=aula['link'].strip(), key=f"link_aula_{i}")
 
-        st.markdown("---")
-        st.markdown("### 🎥 Adicionar ou Remover Vídeos")
-        with st.form("nova_aula_form"):
-            novo_titulo = st.text_input("Título da Aula")
-            novo_link = st.text_input("Link do YouTube")
-            if st.form_submit_button("Cadastrar Vídeo") and novo_titulo and novo_link:
-                AULAS_DO_CANAL.append({"titulo": novo_titulo, "link": novo_link})
-                enviar_arquivo_github(JSON_PATH, json.dumps(AULAS_DO_CANAL, indent=4, ensure_ascii=False).encode("utf-8"), "Atualizando vídeos")
-                st.success("Vídeo cadastrado!")
-                st.rerun()
-        
-        if AULAS_DO_CANAL:
-            st.write("Aulas Cadastradas:")
-            for idx, item in enumerate(AULAS_DO_CANAL):
-                col1, col2 = st.columns(2)
-                col1.write(f"**{item['titulo']}**")
-                if col2.button("Apagar", key=f"del_aula_{idx}"):
-                    AULAS_DO_CANAL.pop(idx)
-                    enviar_arquivo_github(JSON_PATH, json.dumps(AULAS_DO_CANAL, indent=4, ensure_ascii=False).encode("utf-8"), "Removendo vídeo")
+    st.markdown("---")
+    st.markdown("### 📚 Materiais de Apoio")
+    if os.path.exists(PASTA_MATERIAIS):
+        arquivos = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
+        for i, nome_arquivo in enumerate(arquivos):
+            with open(os.path.join(PASTA_MATERIAIS, nome_arquivo), "rb") as file:
+                st.download_button(label=f"📥 Baixar {nome_arquivo.replace('.pdf', '')}", data=file, file_name=nome_arquivo, mime="application/pdf", key=f"mat_dinamico_{i}")
+
+    st.markdown("---")
+    if st.button("🗑️ Limpar Conversa", key="clear_chat"):
+        st.session_state.messages = []
+        st.rerun()
+
+    # GERENCIADOR TOTALMENTE PROTEGIDO NO FINAL DO MENU LATERAL
+    st.markdown("---")
+    modo_admin = st.checkbox("⚙️ Acesso do Professor (Admin)", value=False)
+    
+    if modo_admin:
+        senha = st.text_input("Senha mestra:", type="password", key="admin_password_field")
+        if senha == ADMIN_PASSWORD:
+            st.success("🔒 Painel Liberado!")
+            
+            st.markdown("**Apostilas (PDFs)**")
+            upload_pdf = st.file_uploader("Upload PDF:", type=["pdf"])
+            if upload_pdf is not None and st.button("Salvar PDF"):
+                if enviar_arquivo_github(f"materiais/{upload_pdf.name}", upload_pdf.getvalue(), f"Adicionando {upload_pdf.name}"):
+                    st.success("Salvo!")
                     st.rerun()
-    elif senha != "":
-        st.error("Senha incorreta!")
+                    
+            if os.path.exists(PASTA_MATERIAIS):
+                arquivos_deletar = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
+                if arquivos_deletar:
+                    arq_selecionado = st.selectbox("Apagar PDF:", arquivos_deletar)
+                    if st.button("❌ Deletar Selecionado", type="primary"):
+                        if deletar_arquivo_github(f"materiais/{arq_selecionado}", f"Deletando {arq_selecionado}"):
+                            st.success("Apagado!")
+                            st.rerun()
+
+            st.markdown("---")
+            st.markdown("**Vídeos (YouTube)**")
+            with st.form("nova_aula_form"):
+                novo_titulo = st.text_input("Título")
+                novo_link = st.text_input("Link")
+                if st.form_submit_button("Salvar Vídeo") and novo_titulo and novo_link:
+                    AULAS_DO_CANAL.append({"titulo": novo_titulo, "link": novo_link})
+                    enviar_arquivo_github(JSON_PATH, json.dumps(AULAS_DO_CANAL, indent=4, ensure_ascii=False).encode("utf-8"), "Atualizando vídeos")
+                    st.success("Cadastrado!")
+                    st.rerun()
+            
+            if AULAS_DO_CANAL:
+                st.write("Lista de Vídeos:")
+                for idx, item in enumerate(AULAS_DO_CANAL):
+                    col1, col2 = st.columns(2)
+                    col1.write(item['titulo'])
+                    if col2.button("Apagar", key=f"del_aula_{idx}"):
+                        AULAS_DO_CANAL.pop(idx)
+                        enviar_arquivo_github(JSON_PATH, json.dumps(AULAS_DO_CANAL, indent=4, ensure_ascii=False).encode("utf-8"), "Removendo vídeo")
+                        st.rerun()
+        elif senha != "":
+            st.error("Senha incorreta!")
 
 # ==============================================================================
-# 💬 TELA EXCLUSIVA DO ALUNO (SÓ EXIBE SE SELECIONADA NO RADIO)
+# 💬 FLUXO DO CHAT DO ALUNO (IMUTÁVEL E FIXADO NA PARTE PRINCIPAL DA TELA)
+# ==============================================================================
+if not st.session_state.messages:
+    st.info("👋 **Olá, cientista!** Utilize a barra lateral para acessar as aulas e materiais ou digite sua dúvida sobre Ciências na caixa abaixo!")
+
+# Renderiza o histórico de mensagens salvas de forma síncrona
+for i, message in enumerate(st.session_state.messages):
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
