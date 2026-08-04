@@ -21,8 +21,9 @@ GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", "")
 GITHUB_REPO = st.secrets.get("GITHUB_REPO", "")
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
 
-# Pasta padrão de materiais de apoio
+# Pastas padrões de armazenamento local
 PASTA_MATERIAIS = "materiais"
+PASTA_VIDEOS = "videos"
 
 # ------------------------------------------------------------------------------
 # 📄 ESTRUTURAÇÃO DO PDF DA RESPOSTA
@@ -87,18 +88,6 @@ st.markdown(f"<style>{css_fundo} h1, h2, h3 {{ color: #1e3d33 !important; }} .st
 st.title("🧬 Robô Professor de Ciências")
 st.markdown("---")
 
-# Carregamento da configuração externa de vídeos
-JSON_PATH = "config_aulas.json"
-if os.path.exists(JSON_PATH):
-    with open(JSON_PATH, "r", encoding="utf-8") as f:
-        AULAS_DO_CANAL = json.load(f)
-else:
-    AULAS_DO_CANAL = [
-        {"titulo": "🌌 Aula: O que é química?", "link": "https://youtube.com"},
-        {"titulo": "🌱 Aula: O que são partículas?", "link": "https://youtube.com"},
-        {"titulo": "🪐 Aula: Soluções químicas", "link": "https://youtube.com"}
-    ]
-
 @st.cache_resource
 def inicializar_sistema_completo():
     chave_api = os.getenv("GOOGLE_API_KEY") or st.secrets.get("GOOGLE_API_KEY")
@@ -119,9 +108,18 @@ if "messages" not in st.session_state:
 with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
     
-    st.markdown("### 🎥 Assistir Aulas no Canal")
-    for i, aula in enumerate(AULAS_DO_CANAL):
-        st.link_button(label=f"▶️ {aula['titulo']}", url=aula['link'].strip(), key=f"link_aula_{i}")
+    st.markdown("### 🎥 Assistir Aulas Gravadas")
+    if os.path.exists(PASTA_VIDEOS):
+        arquivos_video = [f for f in os.listdir(PASTA_VIDEOS) if f.endswith(('.mp4', '.mov', '.avi'))]
+        if arquivos_video:
+            for i, nome_video in enumerate(arquivos_video):
+                st.markdown(f"**▶️ {nome_video}**")
+                with open(os.path.join(PASTA_VIDEOS, nome_video), "rb") as video_file:
+                    st.video(video_file.read(), format="video/mp4", key=f"player_local_{i}")
+        else:
+            st.info("Nenhum vídeo disponível no momento.")
+    else:
+        st.info("Pasta de vídeos não encontrada.")
 
     st.markdown("---")
     st.markdown("### 📚 Materiais de Apoio")
@@ -147,89 +145,39 @@ with st.sidebar:
             if senha == ADMIN_PASSWORD:
                 st.success("🔒 Painel Liberado!")
                 
-                st.markdown("**Apostilas (PDFs)**")
-                upload_pdf = st.file_uploader("Upload PDF:", type=["pdf"])
-                if upload_pdf is not None and st.button("Salvar PDF"):
-                    if enviar_arquivo_github(f"materiais/{upload_pdf.name}", upload_pdf.getvalue(), f"Adicionando {upload_pdf.name}"):
-                        st.success("Salvo!")
-                        st.rerun()
-                        
-                if os.path.exists(PASTA_MATERIAIS):
-                    arquivos_deletar = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
-                    if arquivos_deletar:
-                        arq_selecionado = st.selectbox("Apagar PDF:", arquivos_deletar)
-                        if st.button("❌ Deletar Selecionado", type="primary"):
-                            if deletar_arquivo_github(f"materiais/{arq_selecionado}", f"Deletando {arq_selecionado}"):
-                                sub_apagado = st.success("Apagado!")
-                                st.rerun()
-
-# ==============================================================================
-# 💬 INTERFACE DE CHAT (ÁREA PRINCIPAL) - COLE ISTO NO FINAL DO SEU ARQUIVO
-# ==============================================================================
-
-# Renderiza mensagens anteriores do chat na tela
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-        if message["role"] == "assistant" and "pdf_data" in message:
-            st.download_button(
-                label="📥 Baixar Resposta em PDF",
-                data=message["pdf_data"],
-                file_name="resposta_ciencias.pdf",
-                mime="application/pdf",
-                key=f"dl_{message['id']}"
-            )
-
-# Campo de entrada de texto para o aluno digitar a dúvida
-if prompt := st.chat_input("Pergunte algo sobre ciências..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        with st.spinner("Respondendo..."):
-            try:
-                # Reconstrói o histórico no formato correto exigido pela SDK google-genai
-                contents = []
-                for msg in st.session_state.messages[:-1]:
-                    contents.append(types.Content(
-                        role="user" if msg["role"] == "user" else "model",
-                        parts=[types.Part.from_text(text=msg["content"])]
-                    ))
-                contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
-
-               # Realiza a chamada para o Gemini usando o modelo atualizado
-                response = ai_client.models.generate_content(
-                    model='gemini-3.5-flash', # Atualizado de 2.5-flash para 3.5-flash
-                    contents=contents,
-                    config=types.GenerateContentConfig(
-                        system_instruction=system_prompt,
-                    ),
-                )
-                resposta_texto = response.text
-                message_placeholder.markdown(resposta_texto)
+                # ABAS PARA SEPARAR GERENCIAMENTO DE APOSTILAS E VÍDEOS
+                aba_pdf, aba_video = st.tabs(["📚 Apostilas (PDF)", "🎥 Vídeos (MP4)"])
                 
-                # Gera o PDF dinâmico chamando a sua função gerar_pdf_resposta
-                pdf_buffer = gerar_pdf_resposta(prompt, resposta_texto)
-                pdf_bytes = pdf_buffer.getvalue()
+                with aba_pdf:
+                    st.markdown("**Upload de Apostilas**")
+                    upload_pdf = st.file_uploader("Escolha o arquivo PDF:", type=["pdf"])
+                    if upload_pdf is not None and st.button("Salvar PDF"):
+                        if enviar_arquivo_github(f"materiais/{upload_pdf.name}", upload_pdf.getvalue(), f"Adicionando {upload_pdf.name}"):
+                            st.success("Salvo!")
+                            st.rerun()
+                            
+                    if os.path.exists(PASTA_MATERIAIS):
+                        arquivos_deletar = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
+                        if arquivos_deletar:
+                            arq_selecionado = st.selectbox("Apagar PDF:", arquivos_deletar)
+                            if st.button("❌ Deletar Selecionado", type="primary"):
+                                if deletar_arquivo_github(f"materiais/{arq_selecionado}", f"Deletando {arq_selecionado}"):
+                                    st.success("Apagado!")
+                                    st.rerun()
                 
-                msg_id = len(st.session_state.messages)
-                st.download_button(
-                    label="📥 Baixar Resposta em PDF",
-                    data=pdf_bytes,
-                    file_name="resposta_ciencias.pdf",
-                    mime="application/pdf",
-                    key=f"dl_{msg_id}"
-                )
-                
-                # Salva o texto e o PDF gerado no session_state do Streamlit
-                st.session_state.messages.append({
-                    "role": "assistant", 
-                    "content": resposta_texto, 
-                    "pdf_data": pdf_bytes,
-                    "id": msg_id
-                })
-                
-            except Exception as e:
-                st.error(f"Erro ao processar resposta da IA: {e}")
+                with aba_video:
+                    st.markdown("**Upload de Videoaulas**")
+                    upload_video = st.file_uploader("Escolha o arquivo de vídeo:", type=["mp4", "mov", "avi"])
+                    if upload_video is not None and st.button("Salvar Vídeo"):
+                        if enviar_arquivo_github(f"videos/{upload_video.name}", upload_video.getvalue(), f"Adicionando video {upload_video.name}"):
+                            st.success("Vídeo Salvo!")
+                            st.rerun()
+                    
+                    if os.path.exists(PASTA_VIDEOS):
+                        vids_deletar = [f for f in os.listdir(PASTA_VIDEOS) if f.endswith(('.mp4', '.mov', '.avi'))]
+                        if vids_deletar:
+                            vid_selecionado = st.selectbox("Apagar Vídeo:", vids_deletar)
+                            if st.button("❌ Deletar Vídeo Selecionado", type="primary"):
+                                if deletar_arquivo_github(f"videos/{vid_selecionado}", f"Deletando video {vid_selecionado}"):
+                                    st.success("Vídeo Apagado!")
+                                    st.rerun()
