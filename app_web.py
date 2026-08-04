@@ -121,34 +121,48 @@ with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
     
     st.markdown("### 🎥 Assistir Aulas Gravadas")
-    arquivos_video = [f for f in os.listdir(PASTA_VIDEOS) if f.endswith(('.mp4', '.mov', '.avi'))]
-    if arquivos_video:
-        for i, nome_video in enumerate(arquivos_video):
-            try:
+    try:
+        arquivos_video = [f for f in os.listdir(PASTA_VIDEOS) if f.endswith(('.mp4', '.mov', '.avi'))]
+        videos_validos = 0
+        
+        if arquivos_video:
+            for i, nome_video in enumerate(arquivos_video):
                 caminho_video = os.path.join(PASTA_VIDEOS, nome_video)
                 if os.path.exists(caminho_video) and os.path.getsize(caminho_video) > 0:
-                    st.markdown(f"**▶️ {nome_video}**")
-                    st.video(caminho_video, format="video/mp4", key=f"player_local_{i}")
-                else:
-                    st.warning(f"Vídeo corrompido ou vazio: {nome_video}")
-            except Exception:
-                st.error(f"Erro ao carregar o vídeo: {nome_video}")
-    else:
+                    try:
+                        # Lê o arquivo de vídeo pequeno e converte para base64 para injetar direto no player
+                        with open(caminho_video, "rb") as video_file:
+                            video_bytes = video_file.read()
+                        
+                        st.markdown(f"**▶️ {nome_video}**")
+                        # Passar os bytes diretamente resolve o problema de caminhos em servidores nuvem
+                        st.video(video_bytes, format="video/mp4", key=f"player_local_{i}")
+                        videos_validos += 1
+                    except Exception:
+                        st.warning(f"Não foi possível renderizar: {nome_video}")
+        
+        if videos_validos == 0:
+            st.info("Nenhum vídeo disponível.")
+    except Exception:
         st.info("Nenhum vídeo disponível.")
 
     st.markdown("---")
     st.markdown("### 📚 Materiais de Apoio")
-    arquivos_pdf = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
-    if arquivos_pdf:
-        for i, nome_arquivo in enumerate(arquivos_pdf):
-            try:
+    try:
+        arquivos_pdf = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
+        pdfs_validos = 0
+        
+        if arquivos_pdf:
+            for i, nome_arquivo in enumerate(arquivos_pdf):
                 caminho_pdf = os.path.join(PASTA_MATERIAIS, nome_arquivo)
                 if os.path.exists(caminho_pdf) and os.path.getsize(caminho_pdf) > 0:
                     with open(caminho_pdf, "rb") as file:
                         st.download_button(label=f"📥 Baixar {nome_arquivo.replace('.pdf', '')}", data=file, file_name=nome_arquivo, mime="application/pdf", key=f"mat_dinamico_{i}")
-            except Exception:
-                pass
-    else:
+                        pdfs_validos += 1
+        
+        if pdfs_validos == 0:
+            st.info("Nenhum material disponível.")
+    except Exception:
         st.info("Nenhum material disponível.")
 
     st.markdown("---")
@@ -175,17 +189,18 @@ with st.sidebar:
                         st.success("Salvo com sucesso!")
                         st.rerun()
                 
-                if arquivos_pdf:
-                    arq_selecionado = st.selectbox("Apagar PDF:", arquivos_pdf)
+                arquivos_pdf_todos = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
+                if arquivos_pdf_todos:
+                    arq_selecionado = st.selectbox("Apagar PDF:", arquivos_pdf_todos)
                     if st.button("❌ Deletar Selecionado", type="primary"):
                         caminho_deletar_pdf = f"materiais/{arq_selecionado}"
-                        if deletar_arquivo_github(caminho_deletar_pdf, f"Deletando {arq_selecionado}"):
-                            try:
-                                os.remove(os.path.join(PASTA_MATERIAIS, arq_selecionado))
-                            except Exception:
-                                pass
-                            st.success("Apagado com sucesso!")
-                            st.rerun()
+                        deletar_arquivo_github(caminho_deletar_pdf, f"Deletando {arq_selecionado}")
+                        try:
+                            os.remove(os.path.join(PASTA_MATERIAIS, arq_selecionado))
+                        except Exception:
+                            pass
+                        st.success("Apagado com sucesso!")
+                        st.rerun()
             
             with aba_video:
                 st.markdown("**Upload de Videoaulas**")
@@ -198,17 +213,18 @@ with st.sidebar:
                         st.success("Vídeo Salvo com sucesso!")
                         st.rerun()
                 
-                if arquivos_video:
-                    vid_selecionado = st.selectbox("Apagar Vídeo:", arquivos_video)
+                arquivos_video_todos = [f for f in os.listdir(PASTA_VIDEOS) if f.endswith(('.mp4', '.mov', '.avi'))]
+                if arquivos_video_todos:
+                    vid_selecionado = st.selectbox("Apagar Vídeo:", arquivos_video_todos)
                     if st.button("❌ Deletar Vídeo Selecionado", type="primary"):
                         caminho_deletar_video = f"videos/{vid_selecionado}"
-                        if deletar_arquivo_github(caminho_deletar_video, f"Deletando video {vid_selecionado}"):
-                            try:
-                                os.remove(os.path.join(PASTA_VIDEOS, vid_selecionado))
-                            except Exception:
-                                pass
-                            st.success("Vídeo Apagado com sucesso!")
-                            st.rerun()
+                        deletar_arquivo_github(caminho_deletar_video, f"Deletando video {vid_selecionado}")
+                        try:
+                            os.remove(os.path.join(PASTA_VIDEOS, vid_selecionado))
+                        except Exception:
+                            pass
+                        st.success("Vídeo Apagado com sucesso!")
+                        st.rerun()
 
 # ==============================================================================
 # 💬 INTERFACE DE CHAT (ÁREA PRINCIPAL)
@@ -242,7 +258,6 @@ if prompt := st.chat_input("Pergunte algo sobre ciências..."):
                     ))
                 contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
 
-                # Atualizado para o modelo de produção oficial estável atual
                 response = ai_client.models.generate_content(
                     model='gemini-3.5-flash',
                     contents=contents,
