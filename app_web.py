@@ -25,6 +25,10 @@ ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
 PASTA_MATERIAIS = "materiais"
 PASTA_VIDEOS = "videos"
 
+# Garante que as pastas existam localmente para não dar erro de leitura
+os.makedirs(PASTA_MATERIAIS, exist_ok=True)
+os.makedirs(PASTA_VIDEOS, exist_ok=True)
+
 # ------------------------------------------------------------------------------
 # 📄 ESTRUTURAÇÃO DO PDF DA RESPOSTA
 # ------------------------------------------------------------------------------
@@ -85,6 +89,7 @@ img_base64 = get_base64_image("fundo.jpg")
 css_fundo = f'.stApp {{ background-image: url("data:image/jpg;base64,{img_base64}"); background-size: cover; background-attachment: fixed; }}' if img_base64 else '.stApp { background: linear-gradient(135deg, #eef5f3 0%, #dbe7e4 100%) !important; }'
 st.markdown(f"<style>{css_fundo} h1, h2, h3 {{ color: #1e3d33 !important; }} .stButton>button, .stDownloadButton>button {{ border-radius: 12px !important; background-color: #2a5c4d !important; color: white !important; width: 100%; }} .stChatMessage {{ background-color: rgba(255, 255, 255, 0.85) !important; border-radius: 15px !important; backdrop-filter: blur(8px); }}</style>", unsafe_allow_html=True)
 
+# Título da Área Principal
 st.title("🧬 Robô Professor de Ciências")
 st.markdown("---")
 
@@ -109,23 +114,20 @@ with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
     
     st.markdown("### 🎥 Assistir Aulas Gravadas")
-    if os.path.exists(PASTA_VIDEOS):
-        arquivos_video = [f for f in os.listdir(PASTA_VIDEOS) if f.endswith(('.mp4', '.mov', '.avi'))]
-        if arquivos_video:
-            for i, nome_video in enumerate(arquivos_video):
-                st.markdown(f"**▶️ {nome_video}**")
-                with open(os.path.join(PASTA_VIDEOS, nome_video), "rb") as video_file:
-                    st.video(video_file.read(), format="video/mp4", key=f"player_local_{i}")
-        else:
-            st.info("Nenhum vídeo disponível no momento.")
+    arquivos_video = [f for f in os.listdir(PASTA_VIDEOS) if f.endswith(('.mp4', '.mov', '.avi'))]
+    if arquivos_video:
+        for i, nome_video in enumerate(arquivos_video):
+            st.markdown(f"**▶️ {nome_video}**")
+            # OTIMIZADO: Passa o caminho do arquivo direto em vez de ler o binário pesado na memória
+            st.video(os.path.join(PASTA_VIDEOS, nome_video), format="video/mp4", key=f"player_local_{i}")
     else:
-        st.info("Pasta de vídeos não encontrada.")
+        st.info("Nenhum vídeo disponível.")
 
     st.markdown("---")
     st.markdown("### 📚 Materiais de Apoio")
-    if os.path.exists(PASTA_MATERIAIS):
-        arquivos = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
-        for i, nome_arquivo in enumerate(arquivos):
+    arquivos_pdf = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
+    if arquivos_pdf:
+        for i, nome_arquivo in enumerate(arquivos_pdf):
             with open(os.path.join(PASTA_MATERIAIS, nome_arquivo), "rb") as file:
                 st.download_button(label=f"📥 Baixar {nome_arquivo.replace('.pdf', '')}", data=file, file_name=nome_arquivo, mime="application/pdf", key=f"mat_dinamico_{i}")
 
@@ -151,14 +153,13 @@ with st.sidebar:
                         st.success("Salvo!")
                         st.rerun()
                         
-                if os.path.exists(PASTA_MATERIAIS):
-                    arquivos_deletar = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
-                    if arquivos_deletar:
-                        arq_selecionado = st.selectbox("Apagar PDF:", arquivos_deletar)
-                        if st.button("❌ Deletar Selecionado", type="primary"):
-                            if deletar_arquivo_github(f"materiais/{arq_selecionado}", f"Deletando {arq_selecionado}"):
-                                st.success("Apagado!")
-                                st.rerun()
+                arquivos_deletar = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
+                if arquivos_deletar:
+                    arq_selecionado = st.selectbox("Apagar PDF:", arquivos_deletar)
+                    if st.button("❌ Deletar Selecionado", type="primary"):
+                        if deletar_arquivo_github(f"materiais/{arq_selecionado}", f"Deletando {arq_selecionado}"):
+                            st.success("Apagado!")
+                            st.rerun()
             
             with aba_video:
                 st.markdown("**Upload de Videoaulas**")
@@ -168,18 +169,18 @@ with st.sidebar:
                         st.success("Vídeo Salvo!")
                         st.rerun()
                 
-                if os.path.exists(PASTA_VIDEOS):
-                    vids_deletar = [f for f in os.listdir(PASTA_VIDEOS) if f.endswith(('.mp4', '.mov', '.avi'))]
-                    if vids_deletar:
-                        vid_selecionado = st.selectbox("Apagar Vídeo:", vids_deletar)
-                        if st.button("❌ Deletar Vídeo Selecionado", type="primary"):
-                            if deletar_arquivo_github(f"videos/{vid_selecionado}", f"Deletando video {vid_selecionado}"):
-                                st.success("Vídeo Apagado!")
-                                st.rerun()
+                vids_deletar = [f for f in os.listdir(PASTA_VIDEOS) if f.endswith(('.mp4', '.mov', '.avi'))]
+                if vids_deletar:
+                    vid_selecionado = st.selectbox("Apagar Vídeo:", vids_deletar)
+                    if st.button("❌ Deletar Vídeo Selecionado", type="primary"):
+                        if deletar_arquivo_github(f"videos/{vid_selecionado}", f"Deletando video {vid_selecionado}"):
+                            st.success("Vídeo Apagado!")
+                            st.rerun()
 
 # ==============================================================================
-# 💬 INTERFACE DE CHAT (ÁREA PRINCIPAL)
+# 💬 INTERFACE DE CHAT (ÁREA PRINCIPAL) - FORA DE QUALQUER BLOCO CONDICIONAL
 # ==============================================================================
+# Renderiza o histórico na área central da página
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
