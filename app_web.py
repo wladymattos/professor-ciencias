@@ -161,7 +161,7 @@ with st.sidebar:
                         if st.button("❌ Deletar Selecionado", type="primary"):
                             if deletar_arquivo_github(f"materiais/{arq_selecionado}", f"Deletando {arq_selecionado}"):
                                 st.success("Apagado!")
-                                st.rerun()
+                                r.rerun()
 
                 st.markdown("---")
                 st.markdown("**Vídeos (YouTube)**")
