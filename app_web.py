@@ -130,16 +130,24 @@ with st.sidebar:
                 caminho_video = os.path.join(PASTA_VIDEOS, nome_video)
                 if os.path.exists(caminho_video) and os.path.getsize(caminho_video) > 0:
                     try:
-                        # Lê o arquivo de vídeo pequeno e converte para base64 para injetar direto no player
                         with open(caminho_video, "rb") as video_file:
                             video_bytes = video_file.read()
                         
                         st.markdown(f"**▶️ {nome_video}**")
-                        # Passar os bytes diretamente resolve o problema de caminhos em servidores nuvem
+                        # Tenta rodar no player nativo do navegador
                         st.video(video_bytes, format="video/mp4", key=f"player_local_{i}")
+                        
+                        # Oferece um botão de contingência. Se o codec falhar no navegador, o aluno assiste baixando
+                        st.download_button(
+                            label=f"📥 Baixar/Abrir Aula: {nome_video.replace('.mp4','')}", 
+                            data=video_bytes, 
+                            file_name=nome_video, 
+                            mime="video/mp4", 
+                            key=f"dl_vid_{i}"
+                        )
                         videos_validos += 1
                     except Exception:
-                        st.warning(f"Não foi possível renderizar: {nome_video}")
+                        pass
         
         if videos_validos == 0:
             st.info("Nenhum vídeo disponível.")
@@ -284,6 +292,10 @@ if prompt := st.chat_input("Pergunte algo sobre ciências..."):
                     "pdf_data": pdf_bytes, 
                     "id": msg_id
                 })
+                
+            except Exception as e:
+                st.error(f"Erro ao processar resposta da IA: {e}")
+
                 
             except Exception as e:
                 st.error(f"Erro ao processar resposta da IA: {e}")
