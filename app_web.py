@@ -48,7 +48,7 @@ def gerar_pdf_resposta(pergunta, resposta):
 # ------------------------------------------------------------------------------
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
     repo = GITHUB_REPO.strip("/")
-    url = f"https://github.com{repo}/contents/{caminho_repositorio}"
+    url = f"https://api.github.com/repos/{repo}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
     r = requests.get(url, headers=headers)
@@ -62,7 +62,7 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
 
 def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
     repo = GITHUB_REPO.strip("/")
-    url = f"https://github.com{repo}/contents/{caminho_repositorio}"
+    url = f"https://api.github.com/repos/{repo}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
     r = requests.get(url, headers=headers)
