@@ -25,25 +25,6 @@ ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
 PASTA_MATERIAIS = "materiais"
 
 # ------------------------------------------------------------------------------
-# 📄 ESTRUTURAÇÃO DO PDF DA RESPOSTA
-# ------------------------------------------------------------------------------
-def gerar_pdf_resposta(pergunta, resposta):
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
-    styles = getSampleStyleSheet()
-    estilo_titulo = ParagraphStyle('T1', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor('#1e3d33'), spaceAfter=12)
-    estilo_pergunta = ParagraphStyle('T2', parent=styles['Heading2'], fontSize=12, textColor=colors.HexColor('#2a5c4d'), spaceAfter=12)
-    estilo_corpo = ParagraphStyle('C1', parent=styles['Normal'], fontSize=11, leading=16, textColor=colors.HexColor('#333333'), spaceAfter=8)
-    
-    story = [Paragraph("🧬 Robô Professor de Ciências — Resposta", estilo_titulo), Spacer(1, 10), Paragraph(f"<b>Dúvida do Aluno:</b> {pergunta}", estilo_pergunta), Spacer(1, 10)]
-    for linha in resposta.split('\n'):
-        if linha.strip():
-            story.append(Paragraph(linha.strip(), estilo_corpo))
-    doc.build(story)
-    buffer.seek(0)
-    return buffer
-
-# ------------------------------------------------------------------------------
 # 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API
 # ------------------------------------------------------------------------------
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
@@ -66,8 +47,27 @@ def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
         sha = r.json().get("sha")
         dados = {"message": mensagem_commit, "sha": sha}
         res = requests.delete(url, headers=headers, json=dados)
-        return res.status_code in [200, 204]
+        return res.status_code == 200
     return False
+
+# ------------------------------------------------------------------------------
+# 📄 ESTRUTURAÇÃO DO PDF DA RESPOSTA
+# ------------------------------------------------------------------------------
+def gerar_pdf_resposta(pergunta, resposta):
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
+    styles = getSampleStyleSheet()
+    estilo_titulo = ParagraphStyle('T1', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor('#1e3d33'), spaceAfter=12)
+    estilo_pergunta = ParagraphStyle('T2', parent=styles['Heading2'], fontSize=12, textColor=colors.HexColor('#2a5c4d'), spaceAfter=12)
+    estilo_corpo = ParagraphStyle('C1', parent=styles['Normal'], fontSize=11, leading=16, textColor=colors.HexColor('#333333'), spaceAfter=8)
+    
+    story = [Paragraph("🧬 Robô Professor de Ciências — Resposta", estilo_titulo), Spacer(1, 10), Paragraph(f"<b>Dúvida do Aluno:</b> {pergunta}", estilo_pergunta), Spacer(1, 10)]
+    for linha in resposta.split('\n'):
+        if linha.strip():
+            story.append(Paragraph(linha.strip(), estilo_corpo))
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
 
 # ------------------------------------------------------------------------------
 # 🖼️ ESTILIZAÇÃO E DESIGN DA INTERFACE (CSS)
@@ -79,7 +79,7 @@ def get_base64_image(image_path):
     return None
 
 img_base64 = get_base64_image("fundo.jpg")
-css_fundo = f'.stApp {{ background-image: url("data:image/jpg;base64,{img_base64}"); background-size: cover; background-attachment: fixed; }}' if img_base64 else '.stApp { background: linear-gradient(135deg, #eef5f3 0%, #dbe7e4 100%) !important; } font-attachment: fixed;'
+css_fundo = f'.stApp {{ background-image: url("data:image/jpg;base64,{img_base64}"); background-size: cover; background-attachment: fixed; }}' if img_base64 else '.stApp { background: linear-gradient(135deg, #eef5f3 0%, #dbe7e4 100%) !important; }'
 st.markdown(f"<style>{css_fundo} h1, h2, h3 {{ color: #1e3d33 !important; }} .stButton>button, .stDownloadButton>button {{ border-radius: 12px !important; background-color: #2a5c4d !important; color: white !important; width: 100%; }} .stChatMessage {{ background-color: rgba(255, 255, 255, 0.85) !important; border-radius: 15px !important; backdrop-filter: blur(8px); }}</style>", unsafe_allow_html=True)
 
 st.title("🧬 Robô Professor de Ciências")
@@ -108,11 +108,16 @@ def inicializar_sistema_completo():
 ai_client = inicializar_sistema_completo()
 system_prompt = "Você é um robô professor de ciências didático. Responda de forma clara e educativa."
 
+# Inicialização segura do histórico de chat
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Estado persistente para controle do login do professor
+if "admin_logado" not in st.session_state:
+    st.session_state.admin_logado = False
+
 # ==============================================================================
-# 🧼 BARRA LATERAL FIXA DO ALUNO
+# 🧼 BARRA LATERAL FIXA DO ALUNO (ESTÁVEL E SEMPRE OPERANTE)
 # ==============================================================================
 with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
@@ -135,13 +140,25 @@ with st.sidebar:
         st.rerun()
 
 # ==============================================================================
-# ⚙️ PAINEL DO PROFESSOR (DENTRO DE UM EXPANDER TOTALMENTE INDEPENDENTE)
+# ⚙️ PAINEL DO PROFESSOR (EXPANDER ISOLADO - NÃO INTERFERE NO FLUXO DO CHAT)
 # ==============================================================================
 with st.expander("⚙️ Área do Professor (Painel de Controle)"):
-    senha = st.text_input("Insira a senha mestra para gerenciar:", type="password", key="admin_password_field")
-    if senha == ADMIN_PASSWORD:
-        st.success("Acesso Autorizado!")
-        
+    if not st.session_state.admin_logado:
+        senha = st.text_input("Insira a senha mestra para gerenciar:", type="password", key="admin_password_field")
+        if st.button("Entrar no Painel"):
+            if senha == ADMIN_PASSWORD:
+                st.session_state.admin_logado = True
+                st.rerun()
+            else:
+                st.error("Senha incorreta!")
+                
+    if st.session_state.admin_logado:
+        st.success("🔒 Você está logado no modo Administrador!")
+        if st.button("Sair do Modo Administrador"):
+            st.session_state.admin_logado = False
+            st.rerun()
+            
+        st.markdown("---")
         st.markdown("### 📑 Adicionar ou Remover Apostilas (PDFs)")
         upload_pdf = st.file_uploader("Arraste uma nova apostila PDF aqui:", type=["pdf"])
         if upload_pdf is not None and st.button("Salvar Apostila no Sistema"):
@@ -149,7 +166,7 @@ with st.expander("⚙️ Área do Professor (Painel de Controle)"):
                 st.success("Apostila salva com sucesso!")
                 st.rerun()
             else:
-                st.error("Falha ao salvar no GitHub.")
+                st.error("Falha ao salvar no GitHub. Verifique suas chaves.")
                 
         if os.path.exists(PASTA_MATERIAIS):
             arquivos_deletar = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
@@ -174,15 +191,3 @@ with st.expander("⚙️ Área do Professor (Painel de Controle)"):
         
         if AULAS_DO_CANAL:
             st.write("Aulas Cadastradas:")
-            for idx, item in enumerate(AULAS_DO_CANAL):
-                col1, col2 = st.columns(2)
-                col1.write(f"**{item['titulo']}**")
-                if col2.button("Apagar", key=f"del_aula_{idx}"):
-                    AULAS_DO_CANAL.pop(idx)
-                    enviar_arquivo_github(JSON_PATH, json.dumps(AULAS_DO_CANAL, indent=4, ensure_ascii=False).encode("utf-8"), "Removendo vídeo")
-                    st.rerun()
-    elif senha != "":
-        st.error("Senha incorreta!")
-
-# ==============================================================================
-# 💬 FLUXO PRINCIPAL DO CHAT DO ALUNO (TOTALMENTE FIXO NO FLUXO GLOBAL)
