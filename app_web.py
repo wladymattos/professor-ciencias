@@ -115,6 +115,28 @@ system_prompt = "Você é um robô professor de ciências didático. Responda de
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Inicializa as listas na memória para garantir que não sumam após o upload
+if "videos_memoria" not in st.session_state:
+    st.session_state.videos_memoria = {}
+if "pdfs_memoria" not in st.session_state:
+    st.session_state.pdfs_memoria = {}
+
+# Sincroniza os arquivos físicos existentes nas pastas (caso existam no GitHub)
+try:
+    for f in os.listdir(PASTA_VIDEOS):
+        caminho = os.path.join(PASTA_VIDEOS, f)
+        if f.endswith(('.mp4', '.mov', '.avi')) and os.path.getsize(caminho) > 0 and f not in st.session_state.videos_memoria:
+            with open(caminho, "rb") as vf:
+                st.session_state.videos_memoria[f] = vf.read()
+                
+    for f in os.listdir(PASTA_MATERIAIS):
+        caminho = os.path.join(PASTA_MATERIAIS, f)
+        if f.endswith('.pdf') and os.path.getsize(caminho) > 0 and f not in st.session_state.pdfs_memoria:
+            with open(caminho, "rb") as pf:
+                st.session_state.pdfs_memoria[f] = pf.read()
+except Exception:
+    pass
+
 # ==============================================================================
 # 🧼 BARRA LATERAL FIXA DO ALUNO + GERENCIADOR DO PROFESSOR (ADMIN)
 # ==============================================================================
@@ -122,54 +144,32 @@ with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
     
     st.markdown("### 🎥 Assistir Aulas Gravadas")
-    try:
-        arquivos_video = [f for f in os.listdir(PASTA_VIDEOS) if f.endswith(('.mp4', '.mov', '.avi'))]
-        videos_validos = 0
-        
-        if arquivos_video:
-            for i, nome_video in enumerate(arquivos_video):
-                caminho_video = os.path.join(PASTA_VIDEOS, nome_video)
-                if os.path.exists(caminho_video) and os.path.getsize(caminho_video) > 0:
-                    try:
-                        with open(caminho_video, "rb") as video_file:
-                            video_bytes = video_file.read()
-                        
-                        st.markdown(f"**▶️ {nome_video}**")
-                        st.video(video_bytes, format="video/mp4", key=f"player_local_{i}")
-                        
-                        st.download_button(
-                            label=f"📥 Baixar Aula: {nome_video.replace('.mp4','')}", 
-                            data=video_bytes, 
-                            file_name=nome_video, 
-                            mime="video/mp4", 
-                            key=f"dl_vid_{i}"
-                        )
-                        videos_validos += 1
-                    except Exception:
-                        pass
-        
-        if videos_validos == 0:
-            st.info("Nenhum vídeo disponível.")
-    except Exception:
+    if st.session_state.videos_memoria:
+        for i, (nome_video, video_bytes) in enumerate(st.session_state.videos_memoria.items()):
+            st.markdown(f"**▶️ {nome_video}**")
+            st.video(video_bytes, format="video/mp4", key=f"player_local_{i}")
+            st.download_button(
+                label=f"📥 Baixar Aula: {nome_video.replace('.mp4','')}", 
+                data=video_bytes, 
+                file_name=nome_video, 
+                mime="video/mp4", 
+                key=f"dl_vid_{i}"
+            )
+    else:
         st.info("Nenhum vídeo disponível.")
 
     st.markdown("---")
     st.markdown("### 📚 Materiais de Apoio")
-    try:
-        arquivos_pdf = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
-        pdfs_validos = 0
-        
-        if arquivos_pdf:
-            for i, nome_arquivo in enumerate(arquivos_pdf):
-                caminho_pdf = os.path.join(PASTA_MATERIAIS, nome_arquivo)
-                if os.path.exists(caminho_pdf) and os.path.getsize(caminho_pdf) > 0:
-                    with open(caminho_pdf, "rb") as file:
-                        st.download_button(label=f"📥 Baixar {nome_arquivo.replace('.pdf', '')}", data=file, file_name=nome_arquivo, mime="application/pdf", key=f"mat_dinamico_{i}")
-                        pdfs_validos += 1
-        
-        if pdfs_validos == 0:
-            st.info("Nenhum material disponível.")
-    except Exception:
+    if st.session_state.pdfs_memoria:
+        for i, (nome_arquivo, pdf_bytes) in enumerate(st.session_state.pdfs_memoria.items()):
+            st.download_button(
+                label=f"📥 Baixar {nome_arquivo.replace('.pdf', '')}", 
+                data=pdf_bytes, 
+                file_name=nome_arquivo, 
+                mime="application/pdf", 
+                key=f"mat_dinamico_{i}"
+            )
+    else:
         st.info("Nenhum material disponível.")
 
     st.markdown("---")
@@ -189,23 +189,24 @@ with st.sidebar:
                 st.markdown("**Upload de Apostilas**")
                 upload_pdf = st.file_uploader("Escolha o arquivo PDF:", type=["pdf"])
                 if upload_pdf is not None and st.button("Salvar PDF"):
+                    conteudo_pdf = upload_pdf.getvalue()
                     caminho_final_pdf = f"materiais/{upload_pdf.name}"
                     
-                    # Salva localmente ANTES para atualizar na hora, independente do GitHub
-                    with open(os.path.join(PASTA_MATERIAIS, upload_pdf.name), "wb") as f:
-                        f.write(upload_pdf.getvalue())
-                        
-                    # Tenta sincronizar com o GitHub de forma secundária
-                    enviar_arquivo_github(caminho_final_pdf, upload_pdf.getvalue(), f"Adicionando {upload_pdf.name}")
+                    # Salva na memória RAM do app para atualizar o aluno imediatamente
+                    st.session_state.pdfs_memoria[upload_pdf.name] = conteudo_pdf
+                    
+                    # Envia para o GitHub em background
+                    enviar_arquivo_github(caminho_final_pdf, conteudo_pdf, f"Adicionando {upload_pdf.name}")
                     st.success("Salvo com sucesso!")
                     st.rerun()
                 
-                arquivos_pdf_todos = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
-                if arquivos_pdf_todos:
-                    arq_selecionado = st.selectbox("Apagar PDF:", arquivos_pdf_todos)
+                if st.session_state.pdfs_memoria:
+                    arq_selecionado = st.selectbox("Apagar PDF:", list(st.session_state.pdfs_memoria.keys()))
                     if st.button("❌ Deletar Selecionado", type="primary"):
                         caminho_deletar_pdf = f"materiais/{arq_selecionado}"
                         deletar_arquivo_github(caminho_deletar_pdf, f"Deletando {arq_selecionado}")
+                        if arq_selecionado in st.session_state.pdfs_memoria:
+                            del st.session_state.pdfs_memoria[arq_selecionado]
                         try:
                             os.remove(os.path.join(PASTA_MATERIAIS, arq_selecionado))
                         except Exception:
@@ -217,23 +218,24 @@ with st.sidebar:
                 st.markdown("**Upload de Videoaulas**")
                 upload_video = st.file_uploader("Escolha o arquivo de vídeo:", type=["mp4", "mov", "avi"])
                 if upload_video is not None and st.button("Salvar Vídeo"):
+                    conteudo_video = upload_video.getvalue()
                     caminho_final_video = f"videos/{upload_video.name}"
                     
-                    # CORREÇÃO: Salva o vídeo localmente primeiro para o player encontrar imediatamente
-                    with open(os.path.join(PASTA_VIDEOS, upload_video.name), "wb") as f:
-                        f.write(upload_video.getvalue())
+                    # SALVAMENTO FORÇADO NA MEMÓRIA: Faz o vídeo aparecer para o aluno na hora do clique
+                    st.session_state.videos_memoria[upload_video.name] = conteudo_video
                     
-                    # Tenta enviar para o GitHub sem travar a interface local
-                    enviar_arquivo_github(caminho_final_video, upload_video.getvalue(), f"Adicionando video {upload_video.name}")
+                    # Envia para o GitHub em background
+                    enviar_arquivo_github(caminho_final_video, conteudo_video, f"Adicionando video {upload_video.name}")
                     st.success("Vídeo Salvo com sucesso!")
                     st.rerun()
                 
-                arquivos_video_todos = [f for f in os.listdir(PASTA_VIDEOS) if f.endswith(('.mp4', '.mov', '.avi'))]
-                if arquivos_video_todos:
-                    vid_selecionado = st.selectbox("Apagar Vídeo:", arquivos_video_todos)
+                if st.session_state.videos_memoria:
+                    vid_selecionado = st.selectbox("Apagar Vídeo:", list(st.session_state.videos_memoria.keys()))
                     if st.button("❌ Deletar Vídeo Selecionado", type="primary"):
                         caminho_deletar_video = f"videos/{vid_selecionado}"
                         deletar_arquivo_github(caminho_deletar_video, f"Deletando video {vid_selecionado}")
+                        if vid_selecionado in st.session_state.videos_memoria:
+                            del st.session_state.videos_memoria[vid_selecionado]
                         try:
                             os.remove(os.path.join(PASTA_VIDEOS, vid_selecionado))
                         except Exception:
