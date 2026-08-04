@@ -143,14 +143,17 @@ with st.sidebar:
             st.rerun()
 
 # ==============================================================================
-# ⚙️ TELA DO PAINEL ADMINISTRATIVO
+# ⚙️ LÓGICA DE EXIBIÇÃO: ADMIN VS CHAT DO ALUNO
 # ==============================================================================
+exibir_chat_aluno = True
+
 if aba == "⚙️ Painel do Professor (Admin)":
     st.markdown("## ⚙️ Gerenciador de Conteúdo Sem GitHub")
     senha = st.text_input("Insira a senha mestra:", type="password")
     
     if senha == ADMIN_PASSWORD:
         st.success("Acesso Autorizado!")
+        exibir_chat_aluno = False # Esconde o chat apenas quando logado como admin
         
         # Bloco A: Adicionar e Deletar PDFs de Apostilas
         st.markdown("### 📑 Gerenciar Apostilas (PDFs)")
@@ -180,14 +183,12 @@ if aba == "⚙️ Painel do Professor (Admin)":
         # Bloco B: Gerenciar Vídeos do YouTube (JSON)
         st.markdown("### 🎥 Gerenciar Links de Vídeos")
         
-        # Formulário para adicionar nova aula
         with st.form("nova_aula_form"):
             st.write("Cadastrar Nova Aula:")
             novo_titulo = st.text_input("Título da Aula (Ex: 🌌 Aula: Introdução à Física)")
             novo_link = st.text_input("Link completo do YouTube")
             botao_adicionar = st.form_submit_button("Adicionar Aula à Lista")
             
-            # CORREÇÃO DA INDENTAÇÃO INTERNA DO FORMULÁRIO
             if botao_adicionar:
                 if novo_titulo and novo_link:
                     AULAS_DO_CANAL.append({"titulo": novo_titulo, "link": novo_link})
