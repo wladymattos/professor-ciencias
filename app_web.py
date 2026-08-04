@@ -148,16 +148,23 @@ with st.sidebar:
         for i, (nome_video, video_bytes) in enumerate(st.session_state.videos_memoria.items()):
             st.markdown(f"**▶️ {nome_video}**")
             try:
-                # CORREÇÃO: Transforma os bytes em uma URL string codificada em Base64
-                # Isso força o navegador a abrir o vídeo nativamente, contornando o erro de codec do servidor
                 base64_vid = base64.b64encode(video_bytes).decode("utf-8")
                 video_url = f"data:video/mp4;base64,{base64_vid}"
-                st.video(video_url, format="video/mp4", key=f"player_local_{i}")
+                
+                # Renderiza usando uma tag HTML5 universal pura com controles nativos.
+                # Se o codec do navegador falhar, a tag lida silenciosamente sem quebrar a tela com caixas vermelhas.
+                html_player = f'''
+                <video width="100%" controls style="border-radius: 12px; background-color: black;">
+                    <source src="{video_url}" type="video/mp4">
+                    Seu navegador não suporta a reprodução direta deste codec. Por favor, use o botão de download abaixo.
+                </video>
+                '''
+                st.markdown(html_player, unsafe_allow_html=True)
             except Exception:
-                st.error("Erro crítico ao renderizar o vídeo.")
+                pass
                 
             st.download_button(
-                label=f"📥 Baixar Aula: {nome_video.replace('.mp4','')}", 
+                label=f"📥 Baixar/Abrir Aula: {nome_video.replace('.mp4','')}", 
                 data=video_bytes, 
                 file_name=nome_video, 
                 mime="video/mp4", 
@@ -305,4 +312,3 @@ if prompt := st.chat_input("Pergunte algo sobre ciências..."):
                 })
                 
             except Exception as e:
-                st.error(f"Erro ao processar resposta da IA: {e}")
