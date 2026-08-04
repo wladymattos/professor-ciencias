@@ -126,7 +126,6 @@ with st.sidebar:
         for i, nome_video in enumerate(arquivos_video):
             try:
                 caminho_video = os.path.join(PASTA_VIDEOS, nome_video)
-                # Só tenta renderizar se o arquivo tiver conteúdo e existir localmente
                 if os.path.exists(caminho_video) and os.path.getsize(caminho_video) > 0:
                     st.markdown(f"**▶️ {nome_video}**")
                     st.video(caminho_video, format="video/mp4", key=f"player_local_{i}")
@@ -243,8 +242,9 @@ if prompt := st.chat_input("Pergunte algo sobre ciências..."):
                     ))
                 contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
 
+                # Atualizado para o modelo de produção oficial estável atual
                 response = ai_client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-3.5-flash',
                     contents=contents,
                     config=types.GenerateContentConfig(system_instruction=system_prompt),
                 )
