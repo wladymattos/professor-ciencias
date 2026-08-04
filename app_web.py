@@ -64,7 +64,6 @@ def inicializar_sistema_completo():
         st.error("⚠️ Chave GOOGLE_API_KEY não configurada nos Secrets!")
         st.stop()
     return genai.Client(api_key=chave_api)
-
 ai_client = inicializar_sistema_completo()
 system_prompt = "Você é um robô professor de ciências didático. Responda de forma clara, educativa e sempre em português do Brasil."
 
@@ -204,12 +203,6 @@ with st.sidebar:
 # 💬 INTERFACE DE CHAT (ÁREA PRINCIPAL)
 # ==============================================================================
 for message in st.session_state.messages:
-
-
-# ==============================================================================
-# 💬 INTERFACE DE CHAT (ÁREA PRINCIPAL)
-# ==============================================================================
-for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
         if message["role"] == "assistant" and "pdf_data" in message:
@@ -239,7 +232,7 @@ if prompt := st.chat_input("Pergunte algo sobre ciências..."):
                 contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
 
                 response = ai_client.models.generate_content(
-                    model='gemini-3.5-flash',
+                    model='gemini-2.5-flash',
                     contents=contents,
                     config=types.GenerateContentConfig(system_instruction=system_prompt),
                 )
