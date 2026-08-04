@@ -60,7 +60,7 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
         r = requests.get(url, headers=headers)
         sha = r.json().get("sha") if r.status_code == 200 else None
         conteudo_base64 = base64.b64encode(conteudo_bytes).decode("utf-8")
-        dados = {"message": mensaje_commit, "content": conteudo_base64}
+        dados = {"message": mensagem_commit, "content": conteudo_base64}
         if sha:
             dados["sha"] = sha
         res = requests.put(url, headers=headers, json=dados)
@@ -87,6 +87,31 @@ def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
     except Exception as e:
         st.error(f"Erro ao deletar no GitHub: {e}")
         return False
+
+# NOVA FUNÇÃO: Baixa os arquivos salvos permanentemente no GitHub para a memória do App
+def carregar_arquivos_do_github(pasta_repositorio):
+    url = f"https://github.com{GITHUB_REPO}/contents/{pasta_repositorio}"
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}", 
+        "Accept": "application/vnd.github.v3+json"
+    }
+    arquivos_baixados = {}
+    try:
+        r = requests.get(url, headers=headers)
+        if r.status_code == 200:
+            itens = r.json()
+            if isinstance(itens, list):
+                for item in itens:
+                    if item.get("type") == "file":
+                        download_url = item.get("download_url")
+                        nome_arquivo = item.get("name")
+                        if download_url:
+                            resp_file = requests.get(download_url, headers=headers)
+                            if resp_file.status_code == 200:
+                                arquivos_baixados[nome_arquivo] = resp_file.content
+    except Exception:
+        pass
+    return arquivos_baixados
         
 def get_base64_image(image_path):
     if os.path.exists(image_path):
@@ -114,25 +139,11 @@ system_prompt = "Você é um robô professor de ciências didático. Responda de
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "videos_memoria" not in st.session_state:
-    st.session_state.videos_memoria = {}
-if "pdfs_memoria" not in st.session_state:
-    st.session_state.pdfs_memoria = {}
-
-try:
-    for f in os.listdir(PASTA_VIDEOS):
-        caminho = os.path.join(PASTA_VIDEOS, f)
-        if f.endswith(('.mp4', '.mov', '.avi')) and os.path.getsize(caminho) > 0 and f not in st.session_state.videos_memoria:
-            with open(caminho, "rb") as vf:
-                st.session_state.videos_memoria[f] = vf.read()
-                
-    for f in os.listdir(PASTA_MATERIAIS):
-        caminho = os.path.join(PASTA_MATERIAIS, f)
-        if f.endswith('.pdf') and os.path.getsize(caminho) > 0 and f not in st.session_state.pdfs_memoria:
-            with open(caminho, "rb") as pf:
-                st.session_state.pdfs_memoria[f] = pf.read()
-except Exception:
-    pass
+# Sincroniza e puxa os dados salvos direto do seu GitHub permanentemente ao abrir a página
+if "videos_memoria" not in st.session_state or not st.session_state.videos_memoria:
+    st.session_state.videos_memoria = carregar_arquivos_do_github(PASTA_VIDEOS)
+if "pdfs_memoria" not in st.session_state or not st.session_state.pdfs_memoria:
+    st.session_state.pdfs_memoria = carregar_arquivos_do_github(PASTA_MATERIAIS)
 
 # ==============================================================================
 # 🧼 BARRA LATERAL FIXA DO ALUNO + GERENCIADOR DO PROFESSOR (ADMIN)
@@ -143,27 +154,28 @@ with st.sidebar:
     st.markdown("### 🎥 Assistir Aulas Gravadas")
     if st.session_state.videos_memoria:
         for i, (nome_video, video_bytes) in enumerate(st.session_state.videos_memoria.items()):
-            st.markdown(f"**▶️ {nome_video}**")
-            try:
-                base64_vid = base64.b64encode(video_bytes).decode("utf-8")
-                video_url = f"data:video/mp4;base64,{base64_vid}"
-                html_player = f'''
-                <video width="100%" controls style="border-radius: 12px; background-color: black;">
-                    <source src="{video_url}" type="video/mp4">
-                    Seu navegador não suporta este codec. Use o botão abaixo.
-                </video>
-                '''
-                st.markdown(html_player, unsafe_allow_html=True)
-            except Exception:
-                pass
-                
-            st.download_button(
-                label=f"📥 Baixar Aula: {nome_video.replace('.mp4','')}", 
-                data=video_bytes, 
-                file_name=nome_video, 
-                mime="video/mp4", 
-                key=f"dl_vid_{i}"
-            )
+            if nome_video.endswith(('.mp4', '.mov', '.avi')):
+                st.markdown(f"**▶️ {nome_video}**")
+                try:
+                    base64_vid = base64.b64encode(video_bytes).decode("utf-8")
+                    video_url = f"data:video/mp4;base64,{base64_vid}"
+                    html_player = f'''
+                    <video width="100%" controls style="border-radius: 12px; background-color: black;">
+                        <source src="{video_url}" type="video/mp4">
+                        Seu navegador não suporta este codec. Use o botão abaixo.
+                    </video>
+                    '''
+                    st.markdown(html_player, unsafe_allow_html=True)
+                except Exception:
+                    pass
+                    
+                st.download_button(
+                    label=f"📥 Baixar Aula: {nome_video.replace('.mp4','')}", 
+                    data=video_bytes, 
+                    file_name=nome_video, 
+                    mime="video/mp4", 
+                    key=f"dl_vid_{i}"
+                )
     else:
         st.info("Nenhum vídeo disponível.")
 
@@ -171,13 +183,14 @@ with st.sidebar:
     st.markdown("### 📚 Materiais de Apoio")
     if st.session_state.pdfs_memoria:
         for i, (nome_arquivo, pdf_bytes) in enumerate(st.session_state.pdfs_memoria.items()):
-            st.download_button(
-                label=f"📥 Baixar {nome_arquivo.replace('.pdf', '')}", 
-                data=pdf_bytes, 
-                file_name=nome_arquivo, 
-                mime="application/pdf", 
-                key=f"mat_dinamico_{i}"
-            )
+            if nome_arquivo.endswith('.pdf'):
+                st.download_button(
+                    label=f"📥 Baixar {nome_arquivo.replace('.pdf', '')}", 
+                    data=pdf_bytes, 
+                    file_name=nome_arquivo, 
+                    mime="application/pdf", 
+                    key=f"mat_dinamico_{i}"
+                )
     else:
         st.info("Nenhum material disponível.")
 
@@ -200,6 +213,7 @@ with st.sidebar:
                 if upload_pdf is not None and st.button("Salvar PDF"):
                     conteudo_pdf = upload_pdf.getvalue()
                     caminho_final_pdf = f"materiais/{upload_pdf.name}"
+                    
                     st.session_state.pdfs_memoria[upload_pdf.name] = conteudo_pdf
                     enviar_arquivo_github(caminho_final_pdf, conteudo_pdf, f"Adicionando {upload_pdf.name}")
                     st.success("Salvo com sucesso!")
@@ -212,10 +226,6 @@ with st.sidebar:
                         deletar_arquivo_github(caminho_deletar_pdf, f"Deletando {arq_selecionado}")
                         if arq_selecionado in st.session_state.pdfs_memoria:
                             del st.session_state.pdfs_memoria[arq_selecionado]
-                        try:
-                            os.remove(os.path.join(PASTA_MATERIAIS, arq_selecionado))
-                        except Exception:
-                            pass
                         st.success("Apagado com sucesso!")
                         st.rerun()
             
@@ -225,6 +235,7 @@ with st.sidebar:
                 if upload_video is not None and st.button("Salvar Vídeo"):
                     conteudo_video = upload_video.getvalue()
                     caminho_final_video = f"videos/{upload_video.name}"
+                    
                     st.session_state.videos_memoria[upload_video.name] = conteudo_video
                     enviar_arquivo_github(caminho_final_video, conteudo_video, f"Adicionando video {upload_video.name}")
                     st.success("Vídeo Salvo com sucesso!")
@@ -237,10 +248,6 @@ with st.sidebar:
                         deletar_arquivo_github(caminho_deletar_video, f"Deletando video {vid_selecionado}")
                         if vid_selecionado in st.session_state.videos_memoria:
                             del st.session_state.videos_memoria[vid_selecionado]
-                        try:
-                            os.remove(os.path.join(PASTA_VIDEOS, vid_selecionado))
-                        except Exception:
-                            pass
                         st.success("Vídeo Apagado com sucesso!")
                         st.rerun()
 
