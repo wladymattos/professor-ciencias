@@ -160,7 +160,7 @@ with st.sidebar:
                         arq_selecionado = st.selectbox("Apagar PDF:", arquivos_deletar)
                         if st.button("❌ Deletar Selecionado", type="primary"):
                             if deletar_arquivo_github(f"materiais/{arq_selecionado}", f"Deletando {arq_selecionado}"):
-                                st.success("Apagado!")
+                                sub_apagado = st.success("Apagado!")
                                 st.rerun()
 
 # ==============================================================================
@@ -189,7 +189,7 @@ if prompt := st.chat_input("Pergunte algo sobre ciências..."):
     # Gera a resposta do assistente usando a nova SDK do Google GenAI
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
-        with st.spinner("Pensando..."):
+        with st.spinner("Thinking..."):
             try:
                 # Prepara o histórico no formato esperado pela API do Gemini
                 contents = []
