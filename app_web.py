@@ -175,24 +175,22 @@ with st.sidebar:
                             st.success("Apagado com sucesso!")
                             st.rerun()
             
-            with aba_video:
+                      with aba_video:
                 st.markdown("**Upload de Videoaulas**")
                 upload_video = st.file_uploader("Escolha o arquivo de vídeo:", type=["mp4", "mov", "avi"])
                 if upload_video is not None and st.button("Salvar Vídeo"):
                     caminho_final_video = f"videos/{upload_video.name}"
                     if enviar_arquivo_github(caminho_final_video, upload_video.getvalue(), f"Adicionando video {upload_video.name}"):
-                        # Salva localmente para atualizar a interface imediatamente
                         with open(os.path.join(PASTA_VIDEOS, upload_video.name), "wb") as f:
                             f.write(upload_video.getvalue())
                         st.success("Vídeo Salvo com sucesso!")
                         st.rerun()
                 
-                               if arquivos_video:
+                if arquivos_video:
                     vid_selecionado = st.selectbox("Apagar Vídeo:", arquivos_video)
                     if st.button("❌ Deletar Vídeo Selecionado", type="primary"):
                         caminho_deletar_video = f"videos/{vid_selecionado}"
                         if deletar_arquivo_github(caminho_deletar_video, f"Deletando video {vid_selecionado}"):
-                            # Remove localmente para atualizar a interface imediatamente (Corrigido)
                             os.remove(os.path.join(PASTA_VIDEOS, vid_selecionado))
                             st.success("Vídeo Apagado com sucesso!")
                             st.rerun()
