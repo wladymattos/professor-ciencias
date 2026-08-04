@@ -47,8 +47,11 @@ def gerar_pdf_resposta(pergunta, resposta):
 # 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API
 # ------------------------------------------------------------------------------
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
-    url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
+    # Ajuste correto da URL do GitHub conforme o padrão da API v3
+    repo = GITHUB_REPO.strip("/")
+    url = f"https://github.com{repo}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+    
     r = requests.get(url, headers=headers)
     sha = r.json().get("sha") if r.status_code == 200 else None
     conteudo_base64 = base64.b64encode(conteudo_bytes).decode("utf-8")
@@ -59,12 +62,14 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
     return res.status_code in [200, 201]
 
 def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
-    url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
+    repo = GITHUB_REPO.strip("/")
+    url = f"https://github.com{repo}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+    
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
         sha = r.json().get("sha")
-        dados = {"message": mensaje_commit, "sha": sha}
+        dados = {"message": mensagem_commit, "sha": sha}
         res = requests.delete(url, headers=headers, json=dados)
         return res.status_code == 200
     return False
@@ -138,41 +143,43 @@ with st.sidebar:
     
     if modo_admin:
         senha = st.text_input("Senha mestra:", type="password", key="admin_password_field")
-        if senha == ADMIN_PASSWORD:
-            st.success("🔒 Painel Liberado!")
-            
-            st.markdown("**Apostilas (PDFs)**")
-            upload_pdf = st.file_uploader("Upload PDF:", type=["pdf"])
-            if upload_pdf is not None and st.button("Salvar PDF"):
-                if enviar_arquivo_github(f"materiais/{upload_pdf.name}", upload_pdf.getvalue(), f"Adicionando {upload_pdf.name}"):
-                    st.success("Salvo!")
-                    st.rerun()
-                    
-            if os.path.exists(PASTA_MATERIAIS):
-                arquivos_deletar = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
-                if arquivos_deletar:
-                    arq_selecionado = st.selectbox("Apagar PDF:", arquivos_deletar)
-                    if st.button("❌ Deletar Selecionado", type="primary"):
-                        if deletar_arquivo_github(f"materiais/{arq_selecionado}", f"Deletando {arq_selecionado}"):
-                            st.success("Apagado!")
-                            st.rerun()
-
-            st.markdown("---")
-            st.markdown("**Vídeos (YouTube)**")
-            novo_titulo = st.text_input("Título do Vídeo:")
-            novo_link = st.text_input("Link do Vídeo (YouTube):")
-            
-            if st.button("➕ Adicionar Vídeo"):
-                if novo_titulo and novo_link:
-                    AULAS_DO_CANAL.append({"titulo": novo_titulo, "link": novo_link})
-                    conteudo_json = json.dumps(AULAS_DO_CANAL, indent=4, ensure_ascii=False)
-                    if enviar_arquivo_github(JSON_PATH, conteudo_json.encode("utf-8"), "Atualizando lista de vídeos"):
-                        st.success("Vídeo adicionado com sucesso!")
+        
+        # Correção da lógica de validação da senha do Administrador
+        if senha:
+            if senha == ADMIN_PASSWORD:
+                st.success("🔒 Painel Liberado!")
+                
+                st.markdown("**Apostilas (PDFs)**")
+                upload_pdf = st.file_uploader("Upload PDF:", type=["pdf"])
+                if upload_pdf is not None and st.button("Salvar PDF"):
+                    if enviar_arquivo_github(f"materiais/{upload_pdf.name}", upload_pdf.getvalue(), f"Adicionando {upload_pdf.name}"):
+                        st.success("Salvo!")
                         st.rerun()
-                else:
-                    st.error("Preencha todos os campos do vídeo.")
-        else:
-            if senha:
+                        
+                if os.path.exists(PASTA_MATERIAIS):
+                    arquivos_deletar = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
+                    if arquivos_deletar:
+                        arq_selecionado = st.selectbox("Apagar PDF:", arquivos_deletar)
+                        if st.button("❌ Deletar Selecionado", type="primary"):
+                            if deletar_arquivo_github(f"materiais/{arq_selecionado}", f"Deletando {arq_selecionado}"):
+                                st.success("Apagado!")
+                                st.rerun()
+
+                st.markdown("---")
+                st.markdown("**Vídeos (YouTube)**")
+                novo_titulo = st.text_input("Título do Vídeo:")
+                novo_link = st.text_input("Link do Vídeo (YouTube):")
+                
+                if st.button("➕ Adicionar Vídeo"):
+                    if novo_titulo and novo_link:
+                        AULAS_DO_CANAL.append({"titulo": novo_titulo, "link": novo_link})
+                        conteudo_json = json.dumps(AULAS_DO_CANAL, indent=4, ensure_ascii=False)
+                        if enviar_arquivo_github(JSON_PATH, conteudo_json.encode("utf-8"), "Atualizando lista de vídeos"):
+                            st.success("Vídeo adicionado com sucesso!")
+                            st.rerun()
+                    else:
+                        st.error("Preencha todos os campos do vídeo.")
+            else:
                 st.error("Senha incorreta!")
 
 # ==============================================================================
@@ -189,13 +196,3 @@ for message in st.session_state.messages:
                 data=message["pdf_data"],
                 file_name="resposta_ciencias.pdf",
                 mime="application/pdf",
-                key=f"pdf_{st.session_state.messages.index(message)}"
-            )
-
-# Input de texto do usuário (Chat)
-if prompt := st.chat_input("Pergunte algo sobre ciências (Ex: Por que o céu é azul?)"):
-    # Mostra a pergunta do usuário na tela
-    with st.chat_message("user"):
-        st.markdown(prompt)
-    st.session_state.messages.append({"role": "user", "content": prompt})
-
