@@ -117,11 +117,21 @@ with st.sidebar:
     
     st.markdown("### 🎥 Assistir Aulas Gravadas")
     arquivos_video = [f for f in os.listdir(PASTA_VIDEOS) if f.endswith(('.mp4', '.mov', '.avi'))]
+    
+    videos_validos = 0
     if arquivos_video:
         for i, nome_video in enumerate(arquivos_video):
-            st.markdown(f"**▶️ {nome_video}**")
-            st.video(os.path.join(PASTA_VIDEOS, nome_video), format="video/mp4", key=f"player_local_{i}")
-    else:
+            caminho_completo_video = os.path.join(PASTA_VIDEOS, nome_video)
+            # PROTEÇÃO: Só renderiza se o arquivo existir e não estiver zerado/vazio
+            if os.path.exists(caminho_completo_video) and os.path.getsize(caminho_completo_video) > 0:
+                st.markdown(f"**▶️ {nome_video}**")
+                try:
+                    st.video(caminho_completo_video, format="video/mp4", key=f"player_local_{i}")
+                    videos_validos += 1
+                except Exception as video_err:
+                    st.error(f"Não foi possível carregar o vídeo {nome_video}")
+            
+    if videos_validos == 0:
         st.info("Nenhum vídeo disponível.")
 
     st.markdown("---")
@@ -130,7 +140,7 @@ with st.sidebar:
     if arquivos_pdf:
         for i, nome_arquivo in enumerate(arquivos_pdf):
             caminho_pdf_local = os.path.join(PASTA_MATERIAIS, nome_arquivo)
-            if os.path.exists(caminho_pdf_local):
+            if os.path.exists(caminho_pdf_local) and os.path.getsize(caminho_pdf_local) > 0:
                 with open(caminho_pdf_local, "rb") as file:
                     st.download_button(label=f"📥 Baixar {nome_arquivo.replace('.pdf', '')}", data=file, file_name=nome_arquivo, mime="application/pdf", key=f"mat_dinamico_{i}")
 
@@ -184,12 +194,3 @@ with st.sidebar:
                 
                 if arquivos_video:
                     vid_selecionado = st.selectbox("Apagar Vídeo:", arquivos_video)
-                    if st.button("❌ Deletar Vídeo Selecionado", type="primary"):
-                        caminho_deletar_video = f"videos/{vid_selecionado}"
-                        if deletar_arquivo_github(caminho_deletar_video, f"Deletando video {vid_selecionado}"):
-                            caminho_remover_vid = os.path.join(PASTA_VIDEOS, vid_selecionado)
-                            if os.path.exists(caminho_remover_vid):
-                                os.remove(caminho_remover_vid)
-                            st.success("Vídeo Apagado com sucesso!")
-                            st.rerun()
-
