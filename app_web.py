@@ -147,7 +147,13 @@ with st.sidebar:
     if st.session_state.videos_memoria:
         for i, (nome_video, video_bytes) in enumerate(st.session_state.videos_memoria.items()):
             st.markdown(f"**▶️ {nome_video}**")
-            st.video(video_bytes, format="video/mp4", key=f"player_local_{i}")
+            try:
+                # CORREÇÃO: Envelopando os bytes em BytesIO para evitar o TypeError do Streamlit
+                video_stream = BytesIO(video_bytes)
+                st.video(video_stream, format="video/mp4", key=f"player_local_{i}")
+            except Exception:
+                st.error("Erro ao carregar reprodutor de mídia.")
+                
             st.download_button(
                 label=f"📥 Baixar Aula: {nome_video.replace('.mp4','')}", 
                 data=video_bytes, 
@@ -192,16 +198,13 @@ with st.sidebar:
                     conteudo_pdf = upload_pdf.getvalue()
                     caminho_final_pdf = f"materiais/{upload_pdf.name}"
                     
-                    # Salva na memória RAM do app para atualizar o aluno imediatamente
                     st.session_state.pdfs_memoria[upload_pdf.name] = conteudo_pdf
-                    
-                    # Envia para o GitHub em background
                     enviar_arquivo_github(caminho_final_pdf, conteudo_pdf, f"Adicionando {upload_pdf.name}")
                     st.success("Salvo com sucesso!")
                     st.rerun()
                 
                 if st.session_state.pdfs_memoria:
-                    arq_selecionado = st.selectbox("Apagar PDF:", list(st.session_state.pdfs_memoria.keys()))
+                    arq_selecionado = st.selectbox("Apagar PDF:", arquivos_pdf_todos)
                     if st.button("❌ Deletar Selecionado", type="primary"):
                         caminho_deletar_pdf = f"materiais/{arq_selecionado}"
                         deletar_arquivo_github(caminho_deletar_pdf, f"Deletando {arq_selecionado}")
@@ -221,10 +224,7 @@ with st.sidebar:
                     conteudo_video = upload_video.getvalue()
                     caminho_final_video = f"videos/{upload_video.name}"
                     
-                    # SALVAMENTO FORÇADO NA MEMÓRIA: Faz o vídeo aparecer para o aluno na hora do clique
                     st.session_state.videos_memoria[upload_video.name] = conteudo_video
-                    
-                    # Envia para o GitHub em background
                     enviar_arquivo_github(caminho_final_video, conteudo_video, f"Adicionando video {upload_video.name}")
                     st.success("Vídeo Salvo com sucesso!")
                     st.rerun()
