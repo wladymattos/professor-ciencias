@@ -47,7 +47,6 @@ def gerar_pdf_resposta(pergunta, resposta):
 # 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API
 # ------------------------------------------------------------------------------
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
-    # Ajuste correto da URL do GitHub conforme o padrão da API v3
     repo = GITHUB_REPO.strip("/")
     url = f"https://github.com{repo}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
@@ -144,7 +143,6 @@ with st.sidebar:
     if modo_admin:
         senha = st.text_input("Senha mestra:", type="password", key="admin_password_field")
         
-        # Correção da lógica de validação da senha do Administrador
         if senha:
             if senha == ADMIN_PASSWORD:
                 st.success("🔒 Painel Liberado!")
@@ -196,3 +194,7 @@ for message in st.session_state.messages:
                 data=message["pdf_data"],
                 file_name="resposta_ciencias.pdf",
                 mime="application/pdf",
+                key=f"pdf_{st.session_state.messages.index(message)}"
+            )
+
+# Input de texto do usuário (Chat)
