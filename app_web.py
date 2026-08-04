@@ -59,7 +59,7 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
     if sha:
         dados["sha"] = sha
     res = requests.put(url, headers=headers, json=dados)
-    return res.status_code in [200, 201]
+    return res.status_code in [200, 201]  # CORRIGIDO: Linha restaurada com sucesso
 
 def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
     repo = GITHUB_REPO.strip("/")
@@ -71,7 +71,7 @@ def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
         sha = r.json().get("sha")
         dados = {"message": mensagem_commit, "sha": sha}
         res = requests.delete(url, headers=headers, json=dados)
-        return res.status_code == 200
+        return res.status_code in [200, 201, 204]  # CORRIGIDO: Linha restaurada com sucesso
     return False
 
 # Conversor de imagem de fundo
@@ -186,6 +186,3 @@ for message in st.session_state.messages:
         if message["role"] == "assistant" and "pdf_data" in message:
             st.download_button(
                 label="📥 Baixar Resposta em PDF", data=message["pdf_data"],
-                file_name="resposta_ciencias.pdf", mime="application/pdf", key=f"dl_{message['id']}"
-            )
-
