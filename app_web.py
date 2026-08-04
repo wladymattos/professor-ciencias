@@ -54,7 +54,7 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
     r = requests.get(url, headers=headers)
     sha = r.json().get("sha") if r.status_code == 200 else None
     conteudo_base64 = base64.b64encode(conteudo_bytes).decode("utf-8")
-    dados = {"message": mensaje_commit, "content": conteudo_base64}
+    dados = {"message": mensagem_commit, "content": conteudo_base64}
     if sha:
         dados["sha"] = sha
     res = requests.put(url, headers=headers, json=dados)
@@ -161,7 +161,7 @@ with st.sidebar:
                         if st.button("❌ Deletar Selecionado", type="primary"):
                             if deletar_arquivo_github(f"materiais/{arq_selecionado}", f"Deletando {arq_selecionado}"):
                                 st.success("Apagado!")
-                                st.rerun() # Corrigido aqui: adicionado os parênteses ()
+                                r = st.rerun()
 
 # ==============================================================================
 # 💬 ÁREA DO CHAT (INTERAÇÃO COM O ALUNO)
@@ -189,7 +189,7 @@ if pergunta_aluno := st.chat_input("Digite sua dúvida de Ciências aqui..."):
         st.markdown(pergunta_aluno)
     st.session_state.messages.append({"role": "user", "content": pergunta_aluno})
 
-     # 2. Processa a resposta do modelo
+    # 2. Processa a resposta do modelo
     with st.chat_message("assistant"):
         resposta_placeholder = st.empty()
         with st.spinner("Pensando... 🧬"):
@@ -201,3 +201,4 @@ if pergunta_aluno := st.chat_input("Digite sua dúvida de Ciências aqui..."):
                         role="user" if msg["role"] == "user" else "model",
                         parts=[types.Part.from_text(text=msg["content"])]
                     ))
+                
