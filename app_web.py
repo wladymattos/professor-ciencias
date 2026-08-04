@@ -25,7 +25,7 @@ ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
 PASTA_MATERIAIS = "materiais"
 PASTA_VIDEOS = "videos"
 
-# Garante que as pastas existam localmente para não dar erro de leitura
+# Garante que as pastas existam localmente para evitar erros de leitura
 os.makedirs(PASTA_MATERIAIS, exist_ok=True)
 os.makedirs(PASTA_VIDEOS, exist_ok=True)
 
@@ -85,9 +85,39 @@ def get_base64_image(image_path):
             return base64.b64encode(img_file.read()).decode()
     return None
 
+# CSS CORRIGIDO: Removida a estilização que quebrava e sumia com os blocos de chat
 img_base64 = get_base64_image("fundo.jpg")
-css_fundo = f'.stApp {{ background-image: url("data:image/jpg;base64,{img_base64}"); background-size: cover; background-attachment: fixed; }}' if img_base64 else '.stApp { background: linear-gradient(135deg, #eef5f3 0%, #dbe7e4 100%) !important; }'
-st.markdown(f"<style>{css_fundo} h1, h2, h3 {{ color: #1e3d33 !important; }} .stButton>button, .stDownloadButton>button {{ border-radius: 12px !important; background-color: #2a5c4d !important; color: white !important; width: 100%; }} .stChatMessage {{ background-color: rgba(255, 255, 255, 0.85) !important; border-radius: 15px !important; backdrop-filter: blur(8px); }}</style>", unsafe_allow_html=True)
+if img_base64:
+    css_fundo = f"""
+    <style>
+    .stApp {{
+        background-image: url("data:image/jpg;base64,{img_base64}");
+        background-size: cover;
+        background-attachment: fixed;
+    }}
+    h1, h2, h3 {{ color: #1e3d33 !important; }}
+    .stButton>button, .stDownloadButton>button {{
+        border-radius: 12px !important;
+        background-color: #2a5c4d !important;
+        color: white !important;
+        width: 100%;
+    }}
+    </style>
+    """
+else:
+    css_fundo = """
+    <style>
+    .stApp {{ background: linear-gradient(135deg, #eef5f3 0%, #dbe7e4 100%) !important; }}
+    h1, h2, h3 {{ color: #1e3d33 !important; }}
+    .stButton>button, .stDownloadButton>button {{
+        border-radius: 12px !important;
+        background-color: #2a5c4d !important;
+        color: white !important;
+        width: 100%;
+    }}
+    </style>
+    """
+st.markdown(css_fundo, unsafe_allow_html=True)
 
 # Título da Área Principal
 st.title("🧬 Robô Professor de Ciências")
@@ -118,7 +148,6 @@ with st.sidebar:
     if arquivos_video:
         for i, nome_video in enumerate(arquivos_video):
             st.markdown(f"**▶️ {nome_video}**")
-            # OTIMIZADO: Passa o caminho do arquivo direto em vez de ler o binário pesado na memória
             st.video(os.path.join(PASTA_VIDEOS, nome_video), format="video/mp4", key=f"player_local_{i}")
     else:
         st.info("Nenhum vídeo disponível.")
@@ -178,15 +207,11 @@ with st.sidebar:
                             st.rerun()
 
 # ==============================================================================
-# 💬 INTERFACE DE CHAT (ÁREA PRINCIPAL) - FORA DE QUALQUER BLOCO CONDICIONAL
+# 💬 INTERFACE DE CHAT (ÁREA PRINCIPAL)
 # ==============================================================================
-# Renderiza o histórico na área central da página
+# Mostra o histórico na tela
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
         if message["role"] == "assistant" and "pdf_data" in message:
             st.download_button(
-                label="📥 Baixar Resposta em PDF", data=message["pdf_data"],
-                file_name="resposta_ciencias.pdf", mime="application/pdf", key=f"dl_{message['id']}"
-            )
-
