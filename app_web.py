@@ -148,11 +148,13 @@ with st.sidebar:
         for i, (nome_video, video_bytes) in enumerate(st.session_state.videos_memoria.items()):
             st.markdown(f"**▶️ {nome_video}**")
             try:
-                # CORREÇÃO: Envelopando os bytes em BytesIO para evitar o TypeError do Streamlit
-                video_stream = BytesIO(video_bytes)
-                st.video(video_stream, format="video/mp4", key=f"player_local_{i}")
+                # CORREÇÃO: Transforma os bytes em uma URL string codificada em Base64
+                # Isso força o navegador a abrir o vídeo nativamente, contornando o erro de codec do servidor
+                base64_vid = base64.b64encode(video_bytes).decode("utf-8")
+                video_url = f"data:video/mp4;base64,{base64_vid}"
+                st.video(video_url, format="video/mp4", key=f"player_local_{i}")
             except Exception:
-                st.error("Erro ao carregar reprodutor de mídia.")
+                st.error("Erro crítico ao renderizar o vídeo.")
                 
             st.download_button(
                 label=f"📥 Baixar Aula: {nome_video.replace('.mp4','')}", 
@@ -204,7 +206,7 @@ with st.sidebar:
                     st.rerun()
                 
                 if st.session_state.pdfs_memoria:
-                    arq_selecionado = st.selectbox("Apagar PDF:", arquivos_pdf_todos)
+                    arq_selecionado = st.selectbox("Apagar PDF:", list(st.session_state.pdfs_memoria.keys()))
                     if st.button("❌ Deletar Selecionado", type="primary"):
                         caminho_deletar_pdf = f"materiais/{arq_selecionado}"
                         deletar_arquivo_github(caminho_deletar_pdf, f"Deletando {arq_selecionado}")
