@@ -29,7 +29,6 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
     url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
-    # Verifica se o arquivo já existe para obter o 'sha' (obrigatório para atualização)
     r = requests.get(url, headers=headers)
     sha = r.json().get("sha") if r.status_code == 200 else None
     
@@ -114,12 +113,11 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # ==============================================================================
-# 🧼 BARRA LATERAL METODOLOGIA DINÂMICA + ABA SECRETARIA ADMIN
+# 🧼 BARRA LATERAL DINÂMICA
 # ==============================================================================
 with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
     
-    # Menu de navegação para separar o Aluno do Administrador
     aba = st.radio("Navegar para:", ["Área do Aluno", "⚙️ Painel do Professor (Admin)"])
     
     if aba == "Área do Aluno":
@@ -143,52 +141,55 @@ with st.sidebar:
             st.rerun()
 
 # ==============================================================================
-# ⚙️ LÓGICA DE EXIBIÇÃO: ADMIN VS CHAT DO ALUNO
+# ⚙️ TELA DO PAINEL ADMINISTRATIVO VS ÁREA DO ALUNO
 # ==============================================================================
-exibir_chat_aluno = True
-
 if aba == "⚙️ Painel do Professor (Admin)":
     st.markdown("## ⚙️ Gerenciador de Conteúdo Sem GitHub")
     senha = st.text_input("Insira a senha mestra:", type="password")
     
     if senha == ADMIN_PASSWORD:
         st.success("Acesso Autorizado!")
-        exibir_chat_aluno = False # Esconde o chat apenas quando logado como admin
         
-        # Bloco A: Adicionar e Deletar PDFs de Apostilas
         st.markdown("### 📑 Gerenciar Apostilas (PDFs)")
         upload_pdf = st.file_uploader("Fazer upload de nova apostila PDF:", type=["pdf"])
         if upload_pdf is not None:
             if st.button("Salvar Apostila no Sistema"):
                 sucesso = enviar_arquivo_github(f"materiais/{upload_pdf.name}", upload_pdf.getvalue(), f"Adicionando {upload_pdf.name} via painel admin")
                 if sucesso:
-                    st.success(f"Sucesso! O arquivo {upload_pdf.name} foi gravado e estará disponível em instantes.")
+                    st.success(f"Sucesso! O arquivo {upload_pdf.name} foi gravado.")
                     st.rerun()
                 else:
-                    st.error("Falha ao salvar no GitHub. Verifique os Tokens nas configurações.")
+                    st.error("Falha ao salvar no GitHub.")
                     
-        # Listagem de remoção de PDFs
         PASTA_MATERIAIS = "materiais"
         if os.path.exists(PASTA_MATERIAIS):
             arquivos_deletar = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
             if arquivos_deletar:
-                arq_selecionado = st.selectbox("Selecione uma apostila para APAGAR do sistema:", arquivos_deletar)
+                arq_selecionado = st.selectbox("Selecione uma apostila para APAGAR:", arquivos_deletar)
                 if st.button("❌ EXCLUIR APOSTILA SELECIONADA", type="primary"):
                     if deletar_arquivo_github(f"materiais/{arq_selecionado}", f"Deletando {arq_selecionado} via painel admin"):
-                        st.success(f"{arq_selecionado} foi removido com sucesso!")
+                        st.success(f"{arq_selecionado} removido!")
                         st.rerun()
 
         st.markdown("---")
-        
-        # Bloco B: Gerenciar Vídeos do YouTube (JSON)
         st.markdown("### 🎥 Gerenciar Links de Vídeos")
         
         with st.form("nova_aula_form"):
             st.write("Cadastrar Nova Aula:")
-            novo_titulo = st.text_input("Título da Aula (Ex: 🌌 Aula: Introdução à Física)")
+            novo_titulo = st.text_input("Título da Aula")
             novo_link = st.text_input("Link completo do YouTube")
             botao_adicionar = st.form_submit_button("Adicionar Aula à Lista")
             
-            if botao_adicionar:
-                if novo_titulo and novo_link:
-                    AULAS_DO_CANAL.append({"titulo": novo_titulo, "link": novo_link})
+            if botao_adicionar and novo_titulo and novo_link:
+                AULAS_DO_CANAL.append({"titulo": novo_titulo, "link": novo_link})
+                enviar_arquivo_github(JSON_PATH, json.dumps(AULAS_DO_CANAL, indent=4, ensure_ascii=False).encode("utf-8"), "Atualizando config_aulas.json via painel admin")
+                st.success("Nova aula cadastrada!")
+                st.rerun()
+        
+        if AULAS_DO_CANAL:
+            st.write("Aulas Ativas Cadastradas:")
+            for idx, item in enumerate(AULAS_DO_CANAL):
+                col1, col2 = st.columns([4, 1])
+                col1.write(f"**{item['titulo']}** ({item['link']})")
+                if col2.button("Apagar", key=f"del_aula_{idx}"):
+                    AULAS_DO_CANAL.pop(idx)
