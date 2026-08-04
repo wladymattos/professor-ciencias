@@ -173,7 +173,7 @@ with st.expander("⚙️ Área do Professor (Painel de Controle)"):
         if AULAS_DO_CANAL:
             st.write("Aulas Cadastradas:")
             for idx, item in enumerate(AULAS_DO_CANAL):
-                col1, col2 = st.columns([4, 1])
+                col1, col2 = st.columns()
                 col1.write(f"**{item['titulo']}**")
                 if col2.button("Apagar", key=f"del_aula_{idx}"):
                     AULAS_DO_CANAL.pop(idx)
