@@ -47,7 +47,7 @@ def gerar_pdf_resposta(pergunta, resposta):
     return buffer
 
 # ------------------------------------------------------------------------------
-# 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API (CORRIGIDA)
+# 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API
 # ------------------------------------------------------------------------------
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
     url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
@@ -60,11 +60,10 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
         r = requests.get(url, headers=headers)
         sha = r.json().get("sha") if r.status_code == 200 else None
         conteudo_base64 = base64.b64encode(conteudo_bytes).decode("utf-8")
-        dados = {"message": mensagem_commit, "content": conteudo_base64}
+        dados = {"message": mensaje_commit, "content": conteudo_base64}
         if sha:
             dados["sha"] = sha
         res = requests.put(url, headers=headers, json=dados)
-        # CORREÇÃO CRÍTICA: Linha restaurada com os códigos de sucesso corretos
         return res.status_code in [200, 201]
     except Exception as e:
         st.error(f"Erro na conexão com o GitHub: {e}")
@@ -115,13 +114,11 @@ system_prompt = "Você é um robô professor de ciências didático. Responda de
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Inicializa as listas na memória para garantir que não sumam após o upload
 if "videos_memoria" not in st.session_state:
     st.session_state.videos_memoria = {}
 if "pdfs_memoria" not in st.session_state:
     st.session_state.pdfs_memoria = {}
 
-# Sincroniza os arquivos físicos existentes nas pastas (caso existam no GitHub)
 try:
     for f in os.listdir(PASTA_VIDEOS):
         caminho = os.path.join(PASTA_VIDEOS, f)
@@ -150,13 +147,10 @@ with st.sidebar:
             try:
                 base64_vid = base64.b64encode(video_bytes).decode("utf-8")
                 video_url = f"data:video/mp4;base64,{base64_vid}"
-                
-                # Renderiza usando uma tag HTML5 universal pura com controles nativos.
-                # Se o codec do navegador falhar, a tag lida silenciosamente sem quebrar a tela com caixas vermelhas.
                 html_player = f'''
                 <video width="100%" controls style="border-radius: 12px; background-color: black;">
                     <source src="{video_url}" type="video/mp4">
-                    Seu navegador não suporta a reprodução direta deste codec. Por favor, use o botão de download abaixo.
+                    Seu navegador não suporta este codec. Use o botão abaixo.
                 </video>
                 '''
                 st.markdown(html_player, unsafe_allow_html=True)
@@ -164,7 +158,7 @@ with st.sidebar:
                 pass
                 
             st.download_button(
-                label=f"📥 Baixar/Abrir Aula: {nome_video.replace('.mp4','')}", 
+                label=f"📥 Baixar Aula: {nome_video.replace('.mp4','')}", 
                 data=video_bytes, 
                 file_name=nome_video, 
                 mime="video/mp4", 
@@ -206,7 +200,6 @@ with st.sidebar:
                 if upload_pdf is not None and st.button("Salvar PDF"):
                     conteudo_pdf = upload_pdf.getvalue()
                     caminho_final_pdf = f"materiais/{upload_pdf.name}"
-                    
                     st.session_state.pdfs_memoria[upload_pdf.name] = conteudo_pdf
                     enviar_arquivo_github(caminho_final_pdf, conteudo_pdf, f"Adicionando {upload_pdf.name}")
                     st.success("Salvo com sucesso!")
@@ -232,7 +225,6 @@ with st.sidebar:
                 if upload_video is not None and st.button("Salvar Vídeo"):
                     conteudo_video = upload_video.getvalue()
                     caminho_final_video = f"videos/{upload_video.name}"
-                    
                     st.session_state.videos_memoria[upload_video.name] = conteudo_video
                     enviar_arquivo_github(caminho_final_video, conteudo_video, f"Adicionando video {upload_video.name}")
                     st.success("Vídeo Salvo com sucesso!")
@@ -312,3 +304,4 @@ if prompt := st.chat_input("Pergunte algo sobre ciências..."):
                 })
                 
             except Exception as e:
+                st.error(f"Erro ao processar resposta da IA: {e}")
