@@ -117,22 +117,26 @@ if "messages" not in st.session_state:
 with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
     
-    st.markdown("### 🎥 Assistir Aulas no Canal")
-    for i, aula in enumerate(AULAS_DO_CANAL):
-        st.link_button(label=f"▶️ {aula['titulo']}", url=aula['link'].strip(), key=f"link_aula_{i}")
+    aba = st.radio("Navegar para:", ["Área do Aluno", "⚙️ Painel do Professor (Admin)"])
+    
+    if aba == "Área do Aluno":
+        st.markdown("---")
+        st.markdown("### 🎥 Assistir Aulas no Canal")
+        for i, aula in enumerate(AULAS_DO_CANAL):
+            st.link_button(label=f"▶️ {aula['titulo']}", url=aula['link'].strip(), key=f"link_aula_{i}")
 
-    st.markdown("---")
-    st.markdown("### 📚 Materiais de Apoio")
-    if os.path.exists(PASTA_MATERIAIS):
-        arquivos = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
-        for i, nome_arquivo in enumerate(arquivos):
-            with open(os.path.join(PASTA_MATERIAIS, nome_arquivo), "rb") as file:
-                st.download_button(label=f"📥 Baixar {nome_arquivo.replace('.pdf', '')}", data=file, file_name=nome_arquivo, mime="application/pdf", key=f"mat_dinamico_{i}")
+        st.markdown("---")
+        st.markdown("### 📚 Materiais de Apoio")
+        if os.path.exists(PASTA_MATERIAIS):
+            arquivos = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
+            for i, nome_arquivo in enumerate(arquivos):
+                with open(os.path.join(PASTA_MATERIAIS, nome_arquivo), "rb") as file:
+                    st.download_button(label=f"📥 Baixar {nome_arquivo.replace('.pdf', '')}", data=file, file_name=nome_arquivo, mime="application/pdf", key=f"mat_dinamico_{i}")
 
-    st.markdown("---")
-    if st.button("🗑️ Limpar Conversa", key="clear_chat"):
-        st.session_state.messages = []
-        st.rerun()
+        st.markdown("---")
+        if st.button("🗑️ Limpar Conversa", key="clear_chat"):
+            st.session_state.messages = []
+            st.rerun()
 
 # ==============================================================================
 # ⚙️ PAINEL DO PROFESSOR (DENTRO DE UM EXPANDER TOTALMENTE INDEPENDENTE)
@@ -179,10 +183,6 @@ with st.expander("⚙️ Área do Professor (Painel de Controle)"):
                     AULAS_DO_CANAL.pop(idx)
                     enviar_arquivo_github(JSON_PATH, json.dumps(AULAS_DO_CANAL, indent=4, ensure_ascii=False).encode("utf-8"), "Removendo vídeo")
                     st.rerun()
-    elif senha != "":
-        st.error("Senha incorreta!")
 
 # ==============================================================================
 # 💬 FLUXO PRINCIPAL DO CHAT DO ALUNO (ESTRUTURA INDEPENDENTE E FIXA)
-# ==============================================================================
-if not st.session_state.messages:
