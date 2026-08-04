@@ -188,7 +188,7 @@ if prompt := st.chat_input("Pergunte algo sobre ciências..."):
                 contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
 
                 response = ai_client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-3.6-flash',
                     contents=contents,
                     config=types.GenerateContentConfig(system_instruction=system_prompt),
                 )
