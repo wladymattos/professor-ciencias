@@ -25,13 +25,10 @@ ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
 PASTA_MATERIAIS = "materiais"
 PASTA_VIDEOS = "videos"
 
-# Garante que as pastas existam localmente para evitar erros de leitura
 os.makedirs(PASTA_MATERIAIS, exist_ok=True)
 os.makedirs(PASTA_VIDEOS, exist_ok=True)
 
-# ------------------------------------------------------------------------------
 # 📄 ESTRUTURAÇÃO DO PDF DA RESPOSTA
-# ------------------------------------------------------------------------------
 def gerar_pdf_resposta(pergunta, resposta):
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
@@ -48,28 +45,23 @@ def gerar_pdf_resposta(pergunta, resposta):
     buffer.seek(0)
     return buffer
 
-# ------------------------------------------------------------------------------
 # 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API
-# ------------------------------------------------------------------------------
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
     repo = GITHUB_REPO.strip("/")
     url = f"https://github.com{repo}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
-    
     r = requests.get(url, headers=headers)
     sha = r.json().get("sha") if r.status_code == 200 else None
     conteudo_base64 = base64.b64encode(conteudo_bytes).decode("utf-8")
-    dados = {"message": mensagem_commit, "content": conteudo_base64}
-    if sha:
-        dados["sha"] = sha
+    dados = {"message": message_commit, "content": conteudo_base64}
+    if sha: dados["sha"] = sha
     res = requests.put(url, headers=headers, json=dados)
-    return res.status_code == 200 or res.status_code == 201
+    return res.status_code in [200, 201]
 
 def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
     repo = GITHUB_REPO.strip("/")
     url = f"https://github.com{repo}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
-    
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
         sha = r.json().get("sha")
@@ -78,7 +70,6 @@ def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
         return res.status_code == 200
     return False
 
-# Conversor de imagem de fundo
 def get_base64_image(image_path):
     if os.path.exists(image_path):
         with open(image_path, "rb") as img_file:
@@ -86,39 +77,9 @@ def get_base64_image(image_path):
     return None
 
 img_base64 = get_base64_image("fundo.jpg")
-if img_base64:
-    css_fundo = f"""
-    <style>
-    .stApp {{
-        background-image: url("data:image/jpg;base64,{img_base64}");
-        background-size: cover;
-        background-attachment: fixed;
-    }}
-    h1, h2, h3 {{ color: #1e3d33 !important; }}
-    .stButton>button, .stDownloadButton>button {{
-        border-radius: 12px !important;
-        background-color: #2a5c4d !important;
-        color: white !important;
-        width: 100%;
-    }}
-    </style>
-    """
-else:
-    css_fundo = """
-    <style>
-    .stApp {{ background: linear-gradient(135deg, #eef5f3 0%, #dbe7e4 100%) !important; }}
-    h1, h2, h3 {{ color: #1e3d33 !important; }}
-    .stButton>button, .stDownloadButton>button {{
-        border-radius: 12px !important;
-        background-color: #2a5c4d !important;
-        color: white !important;
-        width: 100%;
-    }}
-    </style>
-    """
-st.markdown(css_fundo, unsafe_allow_html=True)
+css_fundo = f'.stApp {{ background-image: url("data:image/jpg;base64,{img_base64}"); background-size: cover; background-attachment: fixed; }}' if img_base64 else '.stApp { background: linear-gradient(135deg, #eef5f3 0%, #dbe7e4 100%) !important; }'
+st.markdown(f"<style>{css_fundo} h1, h2, h3 {{ color: #1e3d33 !important; }} .stButton>button, .stDownloadButton>button {{ border-radius: 12px !important; background-color: #2a5c4d !important; color: white !important; width: 100%; }}</style>", unsafe_allow_html=True)
 
-# Título da Área Principal
 st.title("🧬 Robô Professor de Ciências")
 st.markdown("---")
 
@@ -136,12 +97,8 @@ system_prompt = "Você é um robô professor de ciências didático. Responda de
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ==============================================================================
-# 🧼 BARRA LATERAL FIXA DO ALUNO + GERENCIADOR DO PROFESSOR (ADMIN)
-# ==============================================================================
 with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
-    
     st.markdown("### 🎥 Assistir Aulas Gravadas")
     arquivos_video = [f for f in os.listdir(PASTA_VIDEOS) if f.endswith(('.mp4', '.mov', '.avi'))]
     if arquivos_video:
@@ -166,13 +123,11 @@ with st.sidebar:
 
     st.markdown("---")
     modo_admin = st.checkbox("⚙️ Acesso do Professor (Admin)", value=False)
-    
     if modo_admin:
         senha = st.text_input("Senha mestra:", type="password", key="admin_password_field")
         if senha and senha == ADMIN_PASSWORD:
             st.success("🔒 Painel Liberado!")
             aba_pdf, aba_video = st.tabs(["📚 Apostilas (PDF)", "🎥 Vídeos (MP4)"])
-            
             with aba_pdf:
                 st.markdown("**Upload de Apostilas**")
                 upload_pdf = st.file_uploader("Escolha o arquivo PDF:", type=["pdf"])
@@ -180,15 +135,12 @@ with st.sidebar:
                     if enviar_arquivo_github(f"materiais/{upload_pdf.name}", upload_pdf.getvalue(), f"Adicionando {upload_pdf.name}"):
                         st.success("Salvo!")
                         st.rerun()
-                        
-                arquivos_deletar = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
-                if archivos_deletar:
-                    arq_selecionado = st.selectbox("Apagar PDF:", arquivos_deletar)
+                if arquivos_pdf:
+                    arq_selecionado = st.selectbox("Apagar PDF:", arquivos_pdf)
                     if st.button("❌ Deletar Selecionado", type="primary"):
                         if deletar_arquivo_github(f"materiais/{arq_selecionado}", f"Deletando {arq_selecionado}"):
                             st.success("Apagado!")
                             st.rerun()
-            
             with aba_video:
                 st.markdown("**Upload de Videoaulas**")
                 upload_video = st.file_uploader("Escolha o arquivo de vídeo:", type=["mp4", "mov", "avi"])
@@ -196,15 +148,13 @@ with st.sidebar:
                     if enviar_arquivo_github(f"videos/{upload_video.name}", upload_video.getvalue(), f"Adicionando video {upload_video.name}"):
                         st.success("Vídeo Salvo!")
                         st.rerun()
-                
-                vids_deletar = [f for f in os.listdir(PASTA_VIDEOS) if f.endswith(('.mp4', '.mov', '.avi'))]
-                if vids_deletar:
-                    vid_selecionado = st.selectbox("Apagar Vídeo:", vids_deletar)
+                if arquivos_video:
+                    vid_selecionado = st.selectbox("Apagar Vídeo:", arquivos_video)
                     if st.button("❌ Deletar Vídeo Selecionado", type="primary"):
                         if deletar_arquivo_github(f"videos/{vid_selecionado}", f"Deletando video {vid_selecionado}"):
                             st.success("Vídeo Apagado!")
                             st.rerun()
-
+# FIM DA PARTE 1
 # ==============================================================================
 # 💬 INTERFACE DE CHAT (ÁREA PRINCIPAL)
 # ==============================================================================
@@ -213,4 +163,56 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
         if message["role"] == "assistant" and "pdf_data" in message:
             st.download_button(
-                label="📥 Baixar Resposta em PDF", data=message["pdf_data"],
+                label="📥 Baixar Resposta em PDF", 
+                data=message["pdf_data"],
+                file_name="resposta_ciencias.pdf", 
+                mime="application/pdf", 
+                key=f"dl_{message['id']}"
+            )
+
+if prompt := st.chat_input("Pergunte algo sobre ciências..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        message_placeholder = st.empty()
+        with st.spinner("Respondendo..."):
+            try:
+                contents = []
+                for msg in st.session_state.messages[:-1]:
+                    contents.append(types.Content(
+                        role="user" if msg["role"] == "user" else "model",
+                        parts=[types.Part.from_text(text=msg["content"])]
+                    ))
+                contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
+
+                response = ai_client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=contents,
+                    config=types.GenerateContentConfig(system_instruction=system_prompt),
+                )
+                resposta_texto = response.text
+                message_placeholder.markdown(resposta_texto)
+                
+                pdf_buffer = gerar_pdf_resposta(prompt, resposta_texto)
+                pdf_bytes = pdf_buffer.getvalue()
+                
+                msg_id = len(st.session_state.messages)
+                st.download_button(
+                    label="📥 Baixar Resposta em PDF", 
+                    data=pdf_bytes,
+                    file_name="resposta_ciencias.pdf", 
+                    mime="application/pdf", 
+                    key=f"dl_{msg_id}"
+                )
+                
+                st.session_state.messages.append({
+                    "role": "assistant", 
+                    "content": resposta_texto, 
+                    "pdf_data": pdf_bytes, 
+                    "id": msg_id
+                })
+                
+            except Exception as e:
+                st.error(f"Erro ao processar resposta da IA: {e}")
