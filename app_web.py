@@ -50,17 +50,9 @@ import re
 # ------------------------------------------------------------------------------
 # 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API
 # ------------------------------------------------------------------------------
-def extrair_repo_valido(repo_string):
-    # Procura pelo padrão 'usuario/repositorio' ignorando links, protocolos ou símbolos extras
-    match = re.search(r'([^:\s/]+/[^:\s/]+)$', repo_string.strip().rstrip('/'))
-    if match:
-        return match.group(1)
-    # Caso não encontre, remove barras das pontas como segurança de fallback
-    return repo_string.strip("/")
-
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
-    repo = GITHUB_REPO.strip("/")
-    url = f"https://github.com{repo}/contents/{caminho_repositorio}"
+    # URL FIXA DA API: Aponta direto para o seu repositório sem ler variáveis que quebram
+    url = f"https://github.com{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
     try:
@@ -77,8 +69,8 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
         return False
 
 def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
-    repo = GITHUB_REPO.strip("/")
-    url = f"https://github.com{repo}/contents/{caminho_repositorio}"
+    # URL FIXA DA API: Aponta direto para o seu repositório sem ler variáveis que quebram
+    url = f"https://github.com{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
     try:
