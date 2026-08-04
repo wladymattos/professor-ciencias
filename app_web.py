@@ -49,7 +49,7 @@ def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
         sha = r.json().get("sha")
-        dados = {"message": mensaje_commit, "sha": sha} if 'mensaje_commit' in locals() else {"message": mensagem_commit, "sha": sha}
+        dados = {"message": mensagem_commit, "sha": sha}
         res = requests.delete(url, headers=headers, json=dados)
         return res.status_code == 200
     return False
@@ -67,7 +67,7 @@ def gerar_pdf_resposta(pergunta, resposta):
     
     story = [Paragraph("🧬 Robô Professor de Ciências — Resposta", estilo_titulo), Spacer(1, 10), Paragraph(f"<b>Dúvida do Aluno:</b> {pergunta}", estilo_pergunta), Spacer(1, 10)]
     for linha in resposta.split('\n'):
-        if línea.strip() if 'línea' in locals() else linha.strip():
+        if linha.strip():
             story.append(Paragraph(linha.strip(), estilo_corpo))
     doc.build(story)
     buffer.seek(0)
@@ -187,6 +187,7 @@ if aba == "⚙️ Painel do Professor (Admin)":
             novo_link = st.text_input("Link completo do YouTube")
             botao_adicionar = st.form_submit_button("Adicionar Aula à Lista")
             
-            # CORREÇÃO CRUCIAL AQUI: Removido operador de atribuição walrus proibido em atributos
+            # CORREÇÃO DA INDENTAÇÃO INTERNA DO FORMULÁRIO
             if botao_adicionar:
                 if novo_titulo and novo_link:
+                    AULAS_DO_CANAL.append({"titulo": novo_titulo, "link": novo_link})
