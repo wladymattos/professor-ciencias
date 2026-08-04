@@ -264,7 +264,7 @@ with st.sidebar:
                         st.success("Vídeo Apagado com sucesso!")
                         st.rerun()
 # ==============================================================================
-# 🧬 PARTE 3 DE 3: INTERFACE DE CHAT (ÁREA PRINCIPAL)
+# 🧬 PARTE 3 DE 3: INTERFACE DE CHAT (ÁREA PRINCIPAL) - ATUALIZADA 🚀
 # ==============================================================================
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -295,9 +295,9 @@ if prompt := st.chat_input("Pergunte algo sobre ciências..."):
                     ))
                 contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
 
-                # 🧠 CORREÇÃO: Utilizando a string de modelo estável correta do Gemini
+                # 🔥 Alterado para o modelo oficial atualizado
                 response = ai_client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-3.6-flash',
                     contents=contents,
                     config=types.GenerateContentConfig(system_instruction=system_prompt),
                 )
