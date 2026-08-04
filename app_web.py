@@ -13,7 +13,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
-# Configuração da página Web
+# Configuração da página Web fixa e centralizada
 st.set_page_config(page_title="Robô Professor de Ciências", page_icon="🧬", layout="centered")
 
 # Credenciais de Integração com o GitHub API
@@ -25,26 +25,20 @@ ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
 # 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API
 # ------------------------------------------------------------------------------
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
-    """Envia ou atualiza um arquivo diretamente no repositório do GitHub"""
     url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
-    
     r = requests.get(url, headers=headers)
     sha = r.json().get("sha") if r.status_code == 200 else None
-    
     conteudo_base64 = base64.b64encode(conteudo_bytes).decode("utf-8")
     dados = {"message": mensagem_commit, "content": conteudo_base64}
     if sha:
         dados["sha"] = sha
-        
     res = requests.put(url, headers=headers, json=dados)
     return res.status_code in [200, 201]
 
 def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
-    """Deleta um arquivo diretamente do repositório do GitHub"""
     url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
-    
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
         sha = r.json().get("sha")
@@ -54,7 +48,7 @@ def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
     return False
 
 # ------------------------------------------------------------------------------
-# 📄 ESTRUTURAÇÃO DO PDF E ESTILOS VISUAIS
+# 📄 ESTRUTURAÇÃO DO PDF DA RESPOSTA
 # ------------------------------------------------------------------------------
 def gerar_pdf_resposta(pergunta, resposta):
     buffer = BytesIO()
@@ -72,6 +66,9 @@ def gerar_pdf_resposta(pergunta, resposta):
     buffer.seek(0)
     return buffer
 
+# ------------------------------------------------------------------------------
+# 🖼️ ESTILIZAÇÃO E DESIGN DA INTERFACE (CSS)
+# ------------------------------------------------------------------------------
 def get_base64_image(image_path):
     if os.path.exists(image_path):
         with open(image_path, "rb") as img_file:
@@ -85,7 +82,7 @@ st.markdown(f"<style>{css_fundo} h1, h2, h3 {{ color: #1e3d33 !important; }} .st
 st.title("🧬 Robô Professor de Ciências")
 st.markdown("---")
 
-# Carregamento do arquivo JSON de vídeos
+# Carregamento da configuração externa de vídeos
 JSON_PATH = "config_aulas.json"
 if os.path.exists(JSON_PATH):
     with open(JSON_PATH, "r", encoding="utf-8") as f:
@@ -106,90 +103,83 @@ def inicializar_sistema_completo():
     return genai.Client(api_key=chave_api, http_options={'api_version': 'v1'})
 
 ai_client = inicializar_sistema_completo()
-
 system_prompt = "Você é um robô professor de ciências didático. Responda de forma clara e educativa."
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # ==============================================================================
-# 🧼 BARRA LATERAL DINÂMICA
+# 🧼 BARRA LATERAL FIXA DO ALUNO
 # ==============================================================================
 with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
     
-    aba = st.radio("Navegar para:", ["Área do Aluno", "⚙️ Painel do Professor (Admin)"])
-    
-    if aba == "Área do Aluno":
-        st.markdown("---")
-        st.markdown("### 🎥 Assistir Aulas no Canal")
-        for i, aula in enumerate(AULAS_DO_CANAL):
-            st.link_button(label=f"▶️ {aula['titulo']}", url=aula['link'].strip(), key=f"link_aula_{i}")
+    st.markdown("### 🎥 Assistir Aulas no Canal")
+    for i, aula in enumerate(AULAS_DO_CANAL):
+        st.link_button(label=f"▶️ {aula['titulo']}", url=aula['link'].strip(), key=f"link_aula_{i}")
 
-        st.markdown("---")
-        st.markdown("### 📚 Materiais de Apoio")
-        PASTA_MATERIAIS = "materiais"
-        if os.path.exists(PASTA_MATERIAIS):
-            arquivos = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
-            for i, nome_arquivo in enumerate(arquivos):
-                with open(os.path.join(PASTA_MATERIAIS, nome_arquivo), "rb") as file:
-                    st.download_button(label=f"📥 Baixar {nome_arquivo.replace('.pdf', '')}", data=file, file_name=nome_arquivo, mime="application/pdf", key=f"mat_dinamico_{i}")
+    st.markdown("---")
+    st.markdown("### 📚 Materiais de Apoio")
+    PASTA_MATERIAIS = "materiais"
+    if os.path.exists(PASTA_MATERIAIS):
+        arquivos = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
+        for i, nome_arquivo in enumerate(arquivos):
+            with open(os.path.join(PASTA_MATERIAIS, nome_arquivo), "rb") as file:
+                st.download_button(label=f"📥 Baixar {nome_arquivo.replace('.pdf', '')}", data=file, file_name=nome_arquivo, mime="application/pdf", key=f"mat_dinamico_{i}")
 
-        st.markdown("---")
-        if st.button("🗑️ Limpar Conversa", key="clear_chat"):
-            st.session_state.messages = []
-            st.rerun()
+    st.markdown("---")
+    if st.button("🗑️ Limpar Conversa", key="clear_chat"):
+        st.session_state.messages = []
+        st.rerun()
 
 # ==============================================================================
-# ⚙️ TELA DO PAINEL ADMINISTRATIVO VS ÁREA DO ALUNO
+# ⚙️ PAINEL DO PROFESSOR (OCULTO EM UM EXPANDER PARA NÃO SUMIR COM O CHAT)
 # ==============================================================================
-if aba == "⚙️ Painel do Professor (Admin)":
-    st.markdown("## ⚙️ Gerenciador de Conteúdo Sem GitHub")
-    senha = st.text_input("Insira a senha mestra:", type="password")
-    
+with st.expander("⚙️ Área do Professor (Painel de Controle)"):
+    senha = st.text_input("Insira a senha mestra para gerenciar:", type="password", key="admin_password_field")
     if senha == ADMIN_PASSWORD:
         st.success("Acesso Autorizado!")
         
-        st.markdown("### 📑 Gerenciar Apostilas (PDFs)")
-        upload_pdf = st.file_uploader("Fazer upload de nova apostila PDF:", type=["pdf"])
-        if upload_pdf is not None:
-            if st.button("Salvar Apostila no Sistema"):
-                sucesso = enviar_arquivo_github(f"materiais/{upload_pdf.name}", upload_pdf.getvalue(), f"Adicionando {upload_pdf.name} via painel admin")
-                if sucesso:
-                    st.success(f"Sucesso! O arquivo {upload_pdf.name} foi gravado.")
-                    st.rerun()
-                else:
-                    st.error("Falha ao salvar no GitHub.")
-                    
-        PASTA_MATERIAIS = "materiais"
+        st.markdown("### 📑 Adicionar ou Remover Apostilas (PDFs)")
+        upload_pdf = st.file_uploader("Arraste uma nova apostila PDF aqui:", type=["pdf"])
+        if upload_pdf is not None and st.button("Salvar Apostila no Sistema"):
+            if enviar_arquivo_github(f"materiais/{upload_pdf.name}", upload_pdf.getvalue(), f"Adicionando {upload_pdf.name}"):
+                st.success("Apostila salva com sucesso!")
+                st.rerun()
+                
         if os.path.exists(PASTA_MATERIAIS):
             arquivos_deletar = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
             if arquivos_deletar:
-                arq_selecionado = st.selectbox("Selecione uma apostila para APAGAR:", arquivos_deletar)
-                if st.button("❌ EXCLUIR APOSTILA SELECIONADA", type="primary"):
-                    if deletar_arquivo_github(f"materiais/{arq_selecionado}", f"Deletando {arq_selecionado} via painel admin"):
-                        st.success(f"{arq_selecionado} removido!")
+                arq_selecionado = st.selectbox("Selecione um material para apagar:", arquivos_deletar)
+                if st.button("❌ EXCLUIR MATERIAL SELECIONADO", type="primary"):
+                    if deletar_arquivo_github(f"materiais/{arq_selecionado}", f"Deletando {arq_selecionado}"):
+                        st.success("Removido com sucesso!")
                         st.rerun()
 
         st.markdown("---")
-        st.markdown("### 🎥 Gerenciar Links de Vídeos")
-        
+        st.markdown("### 🎥 Adicionar ou Remover Vídeos")
         with st.form("nova_aula_form"):
-            st.write("Cadastrar Nova Aula:")
             novo_titulo = st.text_input("Título da Aula")
-            novo_link = st.text_input("Link completo do YouTube")
-            botao_adicionar = st.form_submit_button("Adicionar Aula à Lista")
-            
-            if botao_adicionar and novo_titulo and novo_link:
+            novo_link = st.text_input("Link do YouTube")
+            if st.form_submit_button("Cadastrar Vídeo") and novo_titulo and novo_link:
                 AULAS_DO_CANAL.append({"titulo": novo_titulo, "link": novo_link})
-                enviar_arquivo_github(JSON_PATH, json.dumps(AULAS_DO_CANAL, indent=4, ensure_ascii=False).encode("utf-8"), "Atualizando config_aulas.json via painel admin")
-                st.success("Nova aula cadastrada!")
+                enviar_arquivo_github(JSON_PATH, json.dumps(AULAS_DO_CANAL, indent=4, ensure_ascii=False).encode("utf-8"), "Atualizando vídeos")
+                st.success("Vídeo cadastrado!")
                 st.rerun()
         
         if AULAS_DO_CANAL:
-            st.write("Aulas Ativas Cadastradas:")
+            st.write("Aulas Cadastradas:")
             for idx, item in enumerate(AULAS_DO_CANAL):
                 col1, col2 = st.columns([4, 1])
-                col1.write(f"**{item['titulo']}** ({item['link']})")
+                col1.write(f"**{item['titulo']}**")
                 if col2.button("Apagar", key=f"del_aula_{idx}"):
                     AULAS_DO_CANAL.pop(idx)
+                    enviar_arquivo_github(JSON_PATH, json.dumps(AULAS_DO_CANAL, indent=4, ensure_ascii=False).encode("utf-8"), "Removendo vídeo")
+                    st.rerun()
+    elif senha != "":
+        st.error("Senha incorreta!")
+
+# ==============================================================================
+# 💬 FLUXO PRINCIPAL DO CHAT DO ALUNO (TOTALMENTE FIXO E VISÍVEL)
+# ==============================================================================
+if not st.session_state.messages:
