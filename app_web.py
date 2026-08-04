@@ -122,7 +122,6 @@ with st.sidebar:
     if arquivos_video:
         for i, nome_video in enumerate(arquivos_video):
             caminho_completo_video = os.path.join(PASTA_VIDEOS, nome_video)
-            # PROTEÇÃO: Só renderiza se o arquivo existir e não estiver zerado/vazio
             if os.path.exists(caminho_completo_video) and os.path.getsize(caminho_completo_video) > 0:
                 st.markdown(f"**▶️ {nome_video}**")
                 try:
@@ -194,3 +193,5 @@ with st.sidebar:
                 
                 if arquivos_video:
                     vid_selecionado = st.selectbox("Apagar Vídeo:", arquivos_video)
+                    if st.button("❌ Deletar Vídeo Selecionado", type="primary"):
+                        caminho_deletar_video = f"videos/{vid_selecionado}"
