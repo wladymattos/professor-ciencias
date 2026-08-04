@@ -64,7 +64,7 @@ def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
         sha = r.json().get("sha")
-        dados = {"message": mensagem_commit, "sha": sha}
+        dados = {"message": mensaje_commit, "sha": sha}
         res = requests.delete(url, headers=headers, json=dados)
         return res.status_code == 200
     return False
@@ -160,41 +160,42 @@ with st.sidebar:
             st.markdown("---")
             st.markdown("**Vídeos (YouTube)**")
             novo_titulo = st.text_input("Título do Vídeo:")
-            novo_link = st.text_input("Link do YouTube:")
+            novo_link = st.text_input("Link do Vídeo (YouTube):")
+            
             if st.button("➕ Adicionar Vídeo"):
                 if novo_titulo and novo_link:
                     AULAS_DO_CANAL.append({"titulo": novo_titulo, "link": novo_link})
-                    conteudo_json = json.dumps(AULAS_DO_CANAL, ensure_ascii=False, indent=4)
-                    if enviar_arquivo_github(JSON_PATH, conteudo_json.encode('utf-8'), "Atualizando lista de vídeos"):
-                        st.success("Vídeo adicionado!")
+                    conteudo_json = json.dumps(AULAS_DO_CANAL, indent=4, ensure_ascii=False)
+                    if enviar_arquivo_github(JSON_PATH, conteudo_json.encode("utf-8"), "Atualizando lista de vídeos"):
+                        st.success("Vídeo adicionado com sucesso!")
                         st.rerun()
-                    else:
-                        st.error("Erro ao salvar no GitHub.")
                 else:
-                    st.warning("Preencha todos os campos do vídeo.")
-        elif senha != "":
-            st.error("❌ Senha incorreta!")
+                    st.error("Preencha todos os campos do vídeo.")
+        else:
+            if senha:
+                st.error("Senha incorreta!")
 
 # ==============================================================================
-# 💬 ÁREA PRINCIPAL DO CHAT (INTERAÇÃO DO ALUNO)
+# 💬 ÁREA DO CHAT DE CIÊNCIAS (INTERAÇÃO COM O GEMINI)
 # ==============================================================================
-# Exibe o histórico existente na tela
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-        if msg["role"] == "assistant" and "pdf" in msg:
+
+# Mostra o histórico de mensagens salvas na sessão
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+        if message["role"] == "assistant" and "pdf_data" in message:
             st.download_button(
-                label="📥 Baixar esta resposta em PDF",
-                data=base64.b64decode(msg["pdf"]),
+                label="📄 Baixar Resposta em PDF",
+                data=message["pdf_data"],
                 file_name="resposta_ciencias.pdf",
                 mime="application/pdf",
-                key=f"dl_{st.session_state.messages.index(msg)}"
+                key=f"pdf_{st.session_state.messages.index(message)}"
             )
 
-# Caixa de diálogo com o aluno
-pronto = st.chat_input("Pergunte algo sobre Ciências (ex: Por que o céu é azul?)")
-
-if pronto:
-    # Salva no histórico e exibe imediatamente o texto do usuário
-    st.session_state.messages.append({"role": "user", "content": pronto})
+# Input de texto do usuário (Chat)
+if prompt := st.chat_input("Pergunte algo sobre ciências (Ex: Por que o céu é azul?)"):
+    # Mostra a pergunta do usuário na tela
     with st.chat_message("user"):
+        st.markdown(prompt)
+    st.session_state.messages.append({"role": "user", "content": prompt})
+
