@@ -63,7 +63,7 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
     if sha:
         dados["sha"] = sha
     res = requests.put(url, headers=headers, json=dados)
-    return (res.status_code == 200 or res.status_code == 201)
+    return res.status_code == 200 or res.status_code == 201
 
 def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
     repo = GITHUB_REPO.strip("/")
@@ -75,7 +75,7 @@ def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
         sha = r.json().get("sha")
         dados = {"message": mensagem_commit, "sha": sha}
         res = requests.delete(url, headers=headers, json=dados)
-        return (res.status_code == 200)
+        return res.status_code == 200
     return False
 
 # Conversor de imagem de fundo
@@ -85,7 +85,6 @@ def get_base64_image(image_path):
             return base64.b64encode(img_file.read()).decode()
     return None
 
-# CSS CORRIGIDO: Removida a estilização que quebrava e sumia com os blocos de chat
 img_base64 = get_base64_image("fundo.jpg")
 if img_base64:
     css_fundo = f"""
@@ -183,7 +182,7 @@ with st.sidebar:
                         st.rerun()
                         
                 arquivos_deletar = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
-                if arquivos_deletar:
+                if archivos_deletar:
                     arq_selecionado = st.selectbox("Apagar PDF:", arquivos_deletar)
                     if st.button("❌ Deletar Selecionado", type="primary"):
                         if deletar_arquivo_github(f"materiais/{arq_selecionado}", f"Deletando {arq_selecionado}"):
@@ -209,9 +208,9 @@ with st.sidebar:
 # ==============================================================================
 # 💬 INTERFACE DE CHAT (ÁREA PRINCIPAL)
 # ==============================================================================
-# Mostra o histórico na tela
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
         if message["role"] == "assistant" and "pdf_data" in message:
             st.download_button(
+                label="📥 Baixar Resposta em PDF", data=message["pdf_data"],
