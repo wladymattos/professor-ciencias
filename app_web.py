@@ -21,6 +21,9 @@ GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", "")
 GITHUB_REPO = st.secrets.get("GITHUB_REPO", "")
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
 
+# Pasta padrão de materiais de apoio
+PASTA_MATERIAIS = "materiais"
+
 # ------------------------------------------------------------------------------
 # 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API
 # ------------------------------------------------------------------------------
@@ -120,7 +123,6 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("### 📚 Materiais de Apoio")
-    PASTA_MATERIAIS = "materiais"
     if os.path.exists(PASTA_MATERIAIS):
         arquivos = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
         for i, nome_arquivo in enumerate(arquivos):
@@ -133,7 +135,7 @@ with st.sidebar:
         st.rerun()
 
 # ==============================================================================
-# ⚙️ PAINEL DO PROFESSOR (OCULTO EM UM EXPANDER PARA NÃO SUMIR COM O CHAT)
+# ⚙️ PAINEL DO PROFESSOR (DENTRO DE UM EXPANDER TOTALMENTE INDEPENDENTE)
 # ==============================================================================
 with st.expander("⚙️ Área do Professor (Painel de Controle)"):
     senha = st.text_input("Insira a senha mestra para gerenciar:", type="password", key="admin_password_field")
@@ -161,7 +163,8 @@ with st.expander("⚙️ Área do Professor (Painel de Controle)"):
         with st.form("nova_aula_form"):
             novo_titulo = st.text_input("Título da Aula")
             novo_link = st.text_input("Link do YouTube")
-            if st.form_submit_button("Cadastrar Vídeo") and novo_titulo and novo_link:
+            submetido = st.form_submit_button("Cadastrar Vídeo")
+            if submetido and novo_titulo and novo_link:
                 AULAS_DO_CANAL.append({"titulo": novo_titulo, "link": novo_link})
                 enviar_arquivo_github(JSON_PATH, json.dumps(AULAS_DO_CANAL, indent=4, ensure_ascii=False).encode("utf-8"), "Atualizando vídeos")
                 st.success("Vídeo cadastrado!")
@@ -180,6 +183,6 @@ with st.expander("⚙️ Área do Professor (Painel de Controle)"):
         st.error("Senha incorreta!")
 
 # ==============================================================================
-# 💬 FLUXO PRINCIPAL DO CHAT DO ALUNO (TOTALMENTE FIXO E VISÍVEL)
+# 💬 FLUXO PRINCIPAL DO CHAT DO ALUNO (ESTRUTURA INDEPENDENTE E FIXA)
 # ==============================================================================
 if not st.session_state.messages:
