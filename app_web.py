@@ -49,8 +49,9 @@ def gerar_pdf_resposta(pergunta, resposta):
 # 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API
 # ------------------------------------------------------------------------------
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
-    repo = GITHUB_REPO.strip("/")
-    url = f"https://github.com{repo}/contents/{caminho_repositorio}"
+    # Garante que o formato do repositório não tenha barras extras antes de montar a URL fixa da API
+    repo_limpo = GITHUB_REPO.strip("/")
+    url = f"https://github.com{repo_limpo}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
     try:
@@ -67,8 +68,8 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
         return False
 
 def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
-    repo = GITHUB_REPO.strip("/")
-    url = f"https://github.com{repo}/contents/{caminho_repositorio}"
+    repo_limpo = GITHUB_REPO.strip("/")
+    url = f"https://github.com{repo_limpo}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
     try:
@@ -82,6 +83,7 @@ def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
     except Exception as e:
         st.error(f"Erro ao deletar no GitHub: {e}")
         return False
+
 
 def get_base64_image(image_path):
     if os.path.exists(image_path):
