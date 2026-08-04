@@ -1,3 +1,6 @@
+# ==============================================================================
+# 🧬 PARTE 1 DE 3: IMPORTAÇÕES, CONFIGURAÇÕES E FUNÇÕES DE SUPORTE
+# ==============================================================================
 import os
 import json
 import requests
@@ -38,7 +41,12 @@ def gerar_pdf_resposta(pergunta, resposta):
     estilo_pergunta = ParagraphStyle('T2', parent=styles['Heading2'], fontSize=12, textColor=colors.HexColor('#2a5c4d'), spaceAfter=12)
     estilo_corpo = ParagraphStyle('C1', parent=styles['Normal'], fontSize=11, leading=16, textColor=colors.HexColor('#333333'), spaceAfter=8)
     
-    story = [Paragraph("🧬 Robô Professor de Ciências — Resposta", estilo_titulo), Spacer(1, 10), Paragraph(f"<b>Dúvida do Aluno:</b> {pergunta}", estilo_pergunta), Spacer(1, 10)]
+    story = [
+        Paragraph("🧬 Robô Professor de Ciências — Resposta", estilo_titulo), 
+        Spacer(1, 10), 
+        Paragraph(f"<b>Dúvida do Aluno:</b> {pergunta}", estilo_pergunta), 
+        Spacer(1, 10)
+    ]
     for linha in resposta.split('\n'):
         if linha.strip():
             story.append(Paragraph(linha.strip(), estilo_corpo))
@@ -46,21 +54,20 @@ def gerar_pdf_resposta(pergunta, resposta):
     buffer.seek(0)
     return buffer
 
-# ------------------------------------------------------------------------------
 # 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API
-# ------------------------------------------------------------------------------
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
+    if not GITHUB_REPO or not GITHUB_TOKEN:
+        return False
     url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}", 
         "Accept": "application/vnd.github.v3+json"
     }
-    
     try:
         r = requests.get(url, headers=headers)
         sha = r.json().get("sha") if r.status_code == 200 else None
         conteudo_base64 = base64.b64encode(conteudo_bytes).decode("utf-8")
-        dados = {"message": mensaje_commit, "content": conteudo_base64}
+        dados = {"message": mensagem_commit, "content": conteudo_base64}
         if sha:
             dados["sha"] = sha
         res = requests.put(url, headers=headers, json=dados)
@@ -70,12 +77,13 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
         return False
 
 def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
+    if not GITHUB_REPO or not GITHUB_TOKEN:
+        return False
     url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}", 
         "Accept": "application/vnd.github.v3+json"
     }
-    
     try:
         r = requests.get(url, headers=headers)
         if r.status_code == 200:
@@ -94,6 +102,7 @@ def get_base64_image(image_path):
             return base64.b64encode(img_file.read()).decode()
     return None
 
+# Aplicação de estilos CSS customizados
 img_base64 = get_base64_image("fundo.jpg")
 css_fundo = f'.stApp {{ background-image: url("data:image/jpg;base64,{img_base64}"); background-size: cover; background-attachment: fixed; }}' if img_base64 else '.stApp { background: linear-gradient(135deg, #eef5f3 0%, #dbe7e4 100%) !important; }'
 st.markdown(f"<style>{css_fundo} h1, h2, h3 {{ color: #1e3d33 !important; }} .stButton>button, .stDownloadButton>button {{ border-radius: 12px !important; background-color: #2a5c4d !important; color: white !important; width: 100%; }}</style>", unsafe_allow_html=True)
@@ -108,17 +117,19 @@ def inicializar_sistema_completo():
         st.error("⚠️ Chave GOOGLE_API_KEY não configurada nos Secrets!")
         st.stop()
     return genai.Client(api_key=chave_api)
+
 ai_client = inicializar_sistema_completo()
 system_prompt = "Você é um robô professor de ciências didático. Responda de forma clara, educativa e sempre em português do Brasil."
 
+# Inicialização de estados na memória global do Streamlit
 if "messages" not in st.session_state:
     st.session_state.messages = []
-
 if "videos_memoria" not in st.session_state:
     st.session_state.videos_memoria = {}
 if "pdfs_memoria" not in st.session_state:
     st.session_state.pdfs_memoria = {}
 
+# Leitura inicial para carregar arquivos persistidos do disco
 try:
     for f in os.listdir(PASTA_VIDEOS):
         caminho = os.path.join(PASTA_VIDEOS, f)
@@ -133,9 +144,8 @@ try:
                 st.session_state.pdfs_memoria[f] = pf.read()
 except Exception:
     pass
-
 # ==============================================================================
-# 🧼 BARRA LATERAL FIXA DO ALUNO + GERENCIADOR DO PROFESSOR (ADMIN)
+# 🧬 PARTE 2 DE 3: BARRA LATERAL DO ALUNO E PAINEL ADMINISTRATIVO (ADMIN)
 # ==============================================================================
 with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
@@ -200,6 +210,11 @@ with st.sidebar:
                 if upload_pdf is not None and st.button("Salvar PDF"):
                     conteudo_pdf = upload_pdf.getvalue()
                     caminho_final_pdf = f"materiais/{upload_pdf.name}"
+                    
+                    # 🖥️ CORREÇÃO: Salva fisicamente o arquivo no disco local antes de enviar ao GitHub
+                    with open(os.path.join(PASTA_MATERIAIS, upload_pdf.name), "wb") as f:
+                        f.write(conteudo_pdf)
+                        
                     st.session_state.pdfs_memoria[upload_pdf.name] = conteudo_pdf
                     enviar_arquivo_github(caminho_final_pdf, conteudo_pdf, f"Adicionando {upload_pdf.name}")
                     st.success("Salvo com sucesso!")
@@ -225,6 +240,11 @@ with st.sidebar:
                 if upload_video is not None and st.button("Salvar Vídeo"):
                     conteudo_video = upload_video.getvalue()
                     caminho_final_video = f"videos/{upload_video.name}"
+                    
+                    # 🖥️ CORREÇÃO: Salva fisicamente o arquivo de vídeo no disco local antes de enviar ao GitHub
+                    with open(os.path.join(PASTA_VIDEOS, upload_video.name), "wb") as f:
+                        f.write(conteudo_video)
+                        
                     st.session_state.videos_memoria[upload_video.name] = conteudo_video
                     enviar_arquivo_github(caminho_final_video, conteudo_video, f"Adicionando video {upload_video.name}")
                     st.success("Vídeo Salvo com sucesso!")
@@ -243,9 +263,8 @@ with st.sidebar:
                             pass
                         st.success("Vídeo Apagado com sucesso!")
                         st.rerun()
-
 # ==============================================================================
-# 💬 INTERFACE DE CHAT (ÁREA PRINCIPAL)
+# 🧬 PARTE 3 DE 3: INTERFACE DE CHAT (ÁREA PRINCIPAL)
 # ==============================================================================
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -276,8 +295,9 @@ if prompt := st.chat_input("Pergunte algo sobre ciências..."):
                     ))
                 contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
 
+                # 🧠 CORREÇÃO: Utilizando a string de modelo estável correta do Gemini
                 response = ai_client.models.generate_content(
-                    model='gemini-3.5-flash',
+                    model='gemini-2.5-flash',
                     contents=contents,
                     config=types.GenerateContentConfig(system_instruction=system_prompt),
                 )
