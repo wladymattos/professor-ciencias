@@ -161,44 +161,44 @@ with st.sidebar:
                         if st.button("❌ Deletar Selecionado", type="primary"):
                             if deletar_arquivo_github(f"materiais/{arq_selecionado}", f"Deletando {arq_selecionado}"):
                                 st.success("Apagado!")
-                                r = st.rerun()
+                                st.rerun()
 
 # ==============================================================================
-# 💬 ÁREA DO CHAT (INTERAÇÃO COM O ALUNO)
+# 💬 INTERFACE DE CHAT (ÁREA PRINCIPAL)
 # ==============================================================================
-
-# Exibe o histórico de mensagens salvas na sessão
-for mensagem in st.session_state.messages:
-    with st.chat_message(mensagem["role"]):
-        st.markdown(mensagem["content"])
-        # Recria o botão de download se a mensagem antiga possuir o PDF guardado
-        if mensagem["role"] == "assistant" and "pdf_bytes" in mensagem:
+# Exibe o histórico de mensagens
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+        if message["role"] == "assistant" and "pdf_data" in message:
             st.download_button(
-                label="📄 Baixar resposta em PDF",
-                data=mensagem["pdf_bytes"],
+                label="📥 Baixar Resposta em PDF",
+                data=message["pdf_data"],
                 file_name="resposta_professor_ciencias.pdf",
                 mime="application/pdf",
-                key=f"dl_{mensagem['id']}"
+                key=f"dl_{message['id']}"
             )
 
-# Caixa de digitação para o aluno enviar a dúvida
-if pergunta_aluno := st.chat_input("Digite sua dúvida de Ciências aqui..."):
-    
-    # 1. Mostra e salva a pergunta do usuário
+# Input do usuário
+if prompt := st.chat_input("Pergunte algo sobre ciências..."):
+    # Adiciona a mensagem do usuário ao histórico
+    st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
-        st.markdown(pergunta_aluno)
-    st.session_state.messages.append({"role": "user", "content": pergunta_aluno})
+        st.markdown(prompt)
 
-    # 2. Processa a resposta do modelo
+    # Gera a resposta do assistente usando a nova SDK do Google GenAI
     with st.chat_message("assistant"):
-        resposta_placeholder = st.empty()
-        with st.spinner("Pensando... 🧬"):
+        message_placeholder = st.empty()
+        with st.spinner("Pensando..."):
             try:
-                # Constrói o histórico compatível com a biblioteca google-genai
-                historico_api = []
+                # Prepara o histórico no formato esperado pela API do Gemini
+                contents = []
                 for msg in st.session_state.messages[:-1]:
-                    historico_api.append(types.Content(
+                    contents.append(types.Content(
                         role="user" if msg["role"] == "user" else "model",
                         parts=[types.Part.from_text(text=msg["content"])]
                     ))
-                
+                contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
+
+                response = ai_client.models.generate_content(
+                    model='gemini-2.5-flash',
