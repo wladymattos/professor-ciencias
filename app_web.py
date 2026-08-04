@@ -119,10 +119,12 @@ with st.sidebar:
     
     st.markdown("### 🎥 Assistir Aulas Gravadas")
     arquivos_video = [f for f in os.listdir(PASTA_VIDEOS) if f.endswith(('.mp4', '.mov', '.avi'))]
-    if arquivos_video:
+        if arquivos_video:
         for i, nome_video in enumerate(arquivos_video):
             st.markdown(f"**▶️ {nome_video}**")
-            st.video(os.path.join(PASTA_VIDEOS, nome_video), format="video/mp4", key=f"player_local_{i}")
+            caminho_vid = os.path.join(PASTA_VIDEOS, nome_video)
+            dados_video = open(caminho_vid, "rb").read()
+            st.video(dados_video, format="video/mp4", key=f"player_local_{i}")
     else:
         st.info("Nenhum vídeo disponível.")
 
