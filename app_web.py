@@ -45,30 +45,43 @@ def gerar_pdf_resposta(pergunta, resposta):
     buffer.seek(0)
     return buffer
 
+# ------------------------------------------------------------------------------
 # 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API
+# ------------------------------------------------------------------------------
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
     repo = GITHUB_REPO.strip("/")
     url = f"https://github.com{repo}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
-    r = requests.get(url, headers=headers)
-    sha = r.json().get("sha") if r.status_code == 200 else None
-    conteudo_base64 = base64.b64encode(conteudo_bytes).decode("utf-8")
-    dados = {"message": message_commit, "content": conteudo_base64}
-    if sha: dados["sha"] = sha
-    res = requests.put(url, headers=headers, json=dados)
-    return res.status_code in [200, 201]
+    
+    try:
+        r = requests.get(url, headers=headers)
+        sha = r.json().get("sha") if r.status_code == 200 else None
+        conteudo_base64 = base64.b64encode(conteudo_bytes).decode("utf-8")
+        dados = {"message": mensagem_commit, "content": conteudo_base64}
+        if sha:
+            dados["sha"] = sha
+        res = requests.put(url, headers=headers, json=dados)
+        return res.status_code in [200, 201]
+    except Exception as e:
+        st.error(f"Erro na conexão com o GitHub: {e}")
+        return False
 
 def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
     repo = GITHUB_REPO.strip("/")
     url = f"https://github.com{repo}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
-    r = requests.get(url, headers=headers)
-    if r.status_code == 200:
-        sha = r.json().get("sha")
-        dados = {"message": mensagem_commit, "sha": sha}
-        res = requests.delete(url, headers=headers, json=dados)
-        return res.status_code == 200
-    return False
+    
+    try:
+        r = requests.get(url, headers=headers)
+        if r.status_code == 200:
+            sha = r.json().get("sha")
+            dados = {"message": mensagem_commit, "sha": sha}
+            res = requests.delete(url, headers=headers, json=dados)
+            return res.status_code == 200
+        return False
+    except Exception as e:
+        st.error(f"Erro ao deletar no GitHub: {e}")
+        return False
 
 def get_base64_image(image_path):
     if os.path.exists(image_path):
