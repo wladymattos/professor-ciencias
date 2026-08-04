@@ -49,7 +49,7 @@ def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
         sha = r.json().get("sha")
-        dados = {"message": mensagem_commit, "sha": sha}
+        dados = {"message": mensaje_commit, "sha": sha} if 'mensaje_commit' in locals() else {"message": mensagem_commit, "sha": sha}
         res = requests.delete(url, headers=headers, json=dados)
         return res.status_code == 200
     return False
@@ -67,7 +67,7 @@ def gerar_pdf_resposta(pergunta, resposta):
     
     story = [Paragraph("🧬 Robô Professor de Ciências — Resposta", estilo_titulo), Spacer(1, 10), Paragraph(f"<b>Dúvida do Aluno:</b> {pergunta}", estilo_pergunta), Spacer(1, 10)]
     for linha in resposta.split('\n'):
-        if linha.strip():
+        if línea.strip() if 'línea' in locals() else linha.strip():
             story.append(Paragraph(linha.strip(), estilo_corpo))
     doc.build(story)
     buffer.seek(0)
@@ -143,7 +143,7 @@ with st.sidebar:
             st.rerun()
 
 # ==============================================================================
-# ⚙️ TELA DO PAINEL ADMINISTRATIVO (Só roda se a aba de admin for selecionada)
+# ⚙️ TELA DO PAINEL ADMINISTRATIVO
 # ==============================================================================
 if aba == "⚙️ Painel do Professor (Admin)":
     st.markdown("## ⚙️ Gerenciador de Conteúdo Sem GitHub")
@@ -185,6 +185,8 @@ if aba == "⚙️ Painel do Professor (Admin)":
             st.write("Cadastrar Nova Aula:")
             novo_titulo = st.text_input("Título da Aula (Ex: 🌌 Aula: Introdução à Física)")
             novo_link = st.text_input("Link completo do YouTube")
-            if st.form_submit_submit_button := st.form_submit_button("Adicionar Aula à Lista"):
+            botao_adicionar = st.form_submit_button("Adicionar Aula à Lista")
+            
+            # CORREÇÃO CRUCIAL AQUI: Removido operador de atribuição walrus proibido em atributos
+            if botao_adicionar:
                 if novo_titulo and novo_link:
-                    AULAS_DO_CANAL.append({"titulo": novo_titulo, "link": novo_link})
