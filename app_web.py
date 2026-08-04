@@ -134,10 +134,8 @@ with st.sidebar:
                             video_bytes = video_file.read()
                         
                         st.markdown(f"**▶️ {nome_video}**")
-                        # Tenta rodar no player nativo do navegador
                         st.video(video_bytes, format="video/mp4", key=f"player_local_{i}")
                         
-                        # Oferece um botão de contingência. Se o codec falhar no navegador, o aluno assiste baixando
                         st.download_button(
                             label=f"📥 Baixar/Abrir Aula: {nome_video.replace('.mp4','')}", 
                             data=video_bytes, 
@@ -192,6 +190,7 @@ with st.sidebar:
                 if upload_pdf is not None and st.button("Salvar PDF"):
                     caminho_final_pdf = f"materiais/{upload_pdf.name}"
                     if enviar_arquivo_github(caminho_final_pdf, upload_pdf.getvalue(), f"Adicionando {upload_pdf.name}"):
+                        # Gravação local forçada imediata
                         with open(os.path.join(PASTA_MATERIAIS, upload_pdf.name), "wb") as f:
                             f.write(upload_pdf.getvalue())
                         st.success("Salvo com sucesso!")
@@ -216,6 +215,7 @@ with st.sidebar:
                 if upload_video is not None and st.button("Salvar Vídeo"):
                     caminho_final_video = f"videos/{upload_video.name}"
                     if enviar_arquivo_github(caminho_final_video, upload_video.getvalue(), f"Adicionando video {upload_video.name}"):
+                        # Gravação local forçada imediata para que o os.listdir() encontre na hora
                         with open(os.path.join(PASTA_VIDEOS, upload_video.name), "wb") as f:
                             f.write(upload_video.getvalue())
                         st.success("Vídeo Salvo com sucesso!")
@@ -292,10 +292,6 @@ if prompt := st.chat_input("Pergunte algo sobre ciências..."):
                     "pdf_data": pdf_bytes, 
                     "id": msg_id
                 })
-                
-            except Exception as e:
-                st.error(f"Erro ao processar resposta da IA: {e}")
-
                 
             except Exception as e:
                 st.error(f"Erro ao processar resposta da IA: {e}")
