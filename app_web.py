@@ -164,9 +164,10 @@ with st.sidebar:
                                 st.rerun()
 
 # ==============================================================================
-# 💬 INTERFACE DE CHAT (ÁREA PRINCIPAL)
+# 💬 INTERFACE DE CHAT (ÁREA PRINCIPAL) - COLE ISTO NO FINAL DO SEU ARQUIVO
 # ==============================================================================
-# Exibe o histórico de mensagens
+
+# Renderiza mensagens anteriores do chat na tela
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
@@ -174,24 +175,22 @@ for message in st.session_state.messages:
             st.download_button(
                 label="📥 Baixar Resposta em PDF",
                 data=message["pdf_data"],
-                file_name="resposta_professor_ciencias.pdf",
+                file_name="resposta_ciencias.pdf",
                 mime="application/pdf",
                 key=f"dl_{message['id']}"
             )
 
-# Input do usuário
+# Campo de entrada de texto para o aluno digitar a dúvida
 if prompt := st.chat_input("Pergunte algo sobre ciências..."):
-    # Adiciona a mensagem do usuário ao histórico
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Gera a resposta do assistente usando a nova SDK do Google GenAI
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
-        with st.spinner("Thinking..."):
+        with st.spinner("Respondendo..."):
             try:
-                # Prepara o histórico no formato esperado pela API do Gemini
+                # Reconstrói o histórico no formato correto exigido pela SDK google-genai
                 contents = []
                 for msg in st.session_state.messages[:-1]:
                     contents.append(types.Content(
@@ -200,5 +199,37 @@ if prompt := st.chat_input("Pergunte algo sobre ciências..."):
                     ))
                 contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
 
+                # Realiza a chamada para o Gemini usando a estrutura correta
                 response = ai_client.models.generate_content(
                     model='gemini-2.5-flash',
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_prompt,
+                    ),
+                )
+                resposta_texto = response.text
+                message_placeholder.markdown(resposta_texto)
+                
+                # Gera o PDF dinâmico chamando a sua função gerar_pdf_resposta
+                pdf_buffer = gerar_pdf_resposta(prompt, resposta_texto)
+                pdf_bytes = pdf_buffer.getvalue()
+                
+                msg_id = len(st.session_state.messages)
+                st.download_button(
+                    label="📥 Baixar Resposta em PDF",
+                    data=pdf_bytes,
+                    file_name="resposta_ciencias.pdf",
+                    mime="application/pdf",
+                    key=f"dl_{msg_id}"
+                )
+                
+                # Salva o texto e o PDF gerado no session_state do Streamlit
+                st.session_state.messages.append({
+                    "role": "assistant", 
+                    "content": resposta_texto, 
+                    "pdf_data": pdf_bytes,
+                    "id": msg_id
+                })
+                
+            except Exception as e:
+                st.error(f"Erro ao processar resposta da IA: {e}")
