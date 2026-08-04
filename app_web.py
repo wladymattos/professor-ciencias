@@ -121,8 +121,8 @@ with st.sidebar:
     if arquivos_video:
         for i, nome_video in enumerate(arquivos_video):
             st.markdown(f"**▶️ {nome_video}**")
-            with open(os.path.join(PASTA_VIDEOS, nome_video), "rb") as video_file:
-                st.video(video_file.read(), format="video/mp4", key=f"player_local_{i}")
+                        with open(os.path.join(PASTA_VIDEOS, nome_video), "rb") as video_file:
+                st.video(video_file, format="video/mp4", key=f"player_local_{i}")
     else:
         st.info("Nenhum vídeo disponível.")
 
