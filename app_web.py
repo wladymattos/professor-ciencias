@@ -49,11 +49,13 @@ def gerar_pdf_resposta(pergunta, resposta):
 # 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API
 # ------------------------------------------------------------------------------
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
-    # Remove barras das pontas para evitar duplicação na URL
-    repo_limpo = GITHUB_REPO.strip("/")
+    # BLINDAGEM: Remove qualquer link, protocolo ou domínio que o usuário possa ter colocado no Secret
+    repo_limpo = GITHUB_REPO.replace("https://", "").replace("http://", "")
+    repo_limpo = repo_limpo.replace("://github.com", "").replace("github.com", "")
+    repo_limpo = repo_limpo.strip("/")
     
-    # URL FIXA DA API: aponta obrigatoriamente para ://github.com
-    url = f"https://://github.com{repo_limpo}/contents/{caminho_repositorio}"
+    # Monta a URL estritamente no padrão correto da API do GitHub
+    url = f"https://api.://github.comrepos/{repo_limpo}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
     try:
@@ -70,10 +72,13 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
         return False
 
 def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
-    repo_limpo = GITHUB_REPO.strip("/")
+    # BLINDAGEM: Remove qualquer link, protocolo ou domínio que o usuário possa ter colocado no Secret
+    repo_limpo = GITHUB_REPO.replace("https://", "").replace("http://", "")
+    repo_limpo = repo_limpo.replace("://github.com", "").replace("github.com", "")
+    repo_limpo = repo_limpo.strip("/")
     
-    # URL FIXA DA API: aponta obrigatoriamente para ://github.com
-    url = f"https://://github.com{repo_limpo}/contents/{caminho_repositorio}"
+    # Monta a URL estritamente no padrão correto da API do GitHub
+    url = f"https://api.://github.comrepos/{repo_limpo}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
     try:
