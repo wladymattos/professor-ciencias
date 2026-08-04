@@ -48,13 +48,13 @@ def gerar_pdf_resposta(pergunta, resposta):
 # ------------------------------------------------------------------------------
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
     repo = GITHUB_REPO.strip("/")
-    url = f"https://api.github.com/repos/{repo}/contents/{caminho_repositorio}"
+    url = f"https://github.com{repo}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
     r = requests.get(url, headers=headers)
     sha = r.json().get("sha") if r.status_code == 200 else None
     conteudo_base64 = base64.b64encode(conteudo_bytes).decode("utf-8")
-    dados = {"message": mensagem_commit, "content": conteudo_base64}
+    dados = {"message": mensaje_commit, "content": conteudo_base64}
     if sha:
         dados["sha"] = sha
     res = requests.put(url, headers=headers, json=dados)
@@ -62,7 +62,7 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
 
 def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
     repo = GITHUB_REPO.strip("/")
-    url = f"https://api.github.com/repos/{repo}/contents/{caminho_repositorio}"
+    url = f"https://github.com{repo}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
     r = requests.get(url, headers=headers)
@@ -161,40 +161,43 @@ with st.sidebar:
                         if st.button("❌ Deletar Selecionado", type="primary"):
                             if deletar_arquivo_github(f"materiais/{arq_selecionado}", f"Deletando {arq_selecionado}"):
                                 st.success("Apagado!")
-                                st.rerun()
-
-                st.markdown("---")
-                st.markdown("**Vídeos (YouTube)**")
-                novo_titulo = st.text_input("Título do Vídeo:")
-                novo_link = st.text_input("Link do Vídeo (YouTube):")
-                
-                if st.button("➕ Adicionar Vídeo"):
-                    if novo_titulo and novo_link:
-                        AULAS_DO_CANAL.append({"titulo": novo_titulo, "link": novo_link})
-                        conteudo_json = json.dumps(AULAS_DO_CANAL, indent=4, ensure_ascii=False)
-                        if enviar_arquivo_github(JSON_PATH, conteudo_json.encode("utf-8"), "Atualizando lista de vídeos"):
-                            st.success("Vídeo adicionado com sucesso!")
-                            st.rerun()
-                    else:
-                        st.error("Preencha todos os campos do vídeo.")
-            else:
-                st.error("Senha incorreta!")
+                                st.rerun() # Corrigido aqui: adicionado os parênteses ()
 
 # ==============================================================================
-# 💬 ÁREA DO CHAT DE CIÊNCIAS (INTERAÇÃO COM O GEMINI)
+# 💬 ÁREA DO CHAT (INTERAÇÃO COM O ALUNO)
 # ==============================================================================
 
-# Mostra o histórico de mensagens salvas na sessão
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-        if message["role"] == "assistant" and "pdf_data" in message:
+# Exibe o histórico de mensagens salvas na sessão
+for mensagem in st.session_state.messages:
+    with st.chat_message(mensagem["role"]):
+        st.markdown(mensagem["content"])
+        # Recria o botão de download se a mensagem antiga possuir o PDF guardado
+        if mensagem["role"] == "assistant" and "pdf_bytes" in mensagem:
             st.download_button(
-                label="📄 Baixar Resposta em PDF",
-                data=message["pdf_data"],
-                file_name="resposta_ciencias.pdf",
+                label="📄 Baixar resposta em PDF",
+                data=mensagem["pdf_bytes"],
+                file_name="resposta_professor_ciencias.pdf",
                 mime="application/pdf",
-                key=f"pdf_{st.session_state.messages.index(message)}"
+                key=f"dl_{mensagem['id']}"
             )
 
-# Input de texto do usuário (Chat)
+# Caixa de digitação para o aluno enviar a dúvida
+if pergunta_aluno := st.chat_input("Digite sua dúvida de Ciências aqui..."):
+    
+    # 1. Mostra e salva a pergunta do usuário
+    with st.chat_message("user"):
+        st.markdown(pergunta_aluno)
+    st.session_state.messages.append({"role": "user", "content": pergunta_aluno})
+
+    # 2. Processa a resposta do modelo
+    with st.chat_message("assistant"):
+        resposta_placeholder = st.empty()
+        with st.spinner("Pensando... 🧬"):
+            try:
+                # Constrói o histórico compatível com a biblioteca google-genai
+                historico_api = []
+                for msg in st.session_state.messages[:-1]:
+                    historico_api.append(types.Content(
+                        role="user" if msg["role"] == "user" else "model",
+                        parts=[types.Part.from_text(text=msg["content"])]
+                    ))
