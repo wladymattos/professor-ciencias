@@ -101,16 +101,16 @@ def inicializar_sistema_completo():
     if not chave_api:
         st.error("⚠️ Chave GOOGLE_API_KEY não configurada nos Secrets!")
         st.stop()
-    return genai.Client(api_key=chave_api, http_options={'api_version': 'v1'})
+    return genai.Client(api_key=chave_api)
 
 ai_client = inicializar_sistema_completo()
-system_prompt = "Você é um robô professor de ciências didático. Responda de forma clara e educativa e em português."
+system_prompt = "Você é um robô professor de ciências didático. Responda de forma clara, educativa e sempre em português do Brasil."
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # ==============================================================================
-# 🧼 BARRA LATERAL FIXA DO ALUNO + GERENCIADOR ISOLADO NO FINAL
+# 🧼 BARRA LATERAL FIXA DO ALUNO + GERENCIADOR DO PROFESSOR (ADMIN)
 # ==============================================================================
 with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
@@ -159,22 +159,27 @@ with st.sidebar:
 
             st.markdown("---")
             st.markdown("**Vídeos (YouTube)**")
-            with st.form("nova_aula_form"):
-                novo_titulo = st.text_input("Título")
-                novo_link = st.text_input("Link do YouTube")
-                submit_aula = st.form_submit_button("Adicionar Vídeo")
-                
-                if submit_aula and novo_titulo and novo_link:
+            # Fora de formulários complexos para evitar bugs de recarregamento
+            novo_titulo = st.text_input("Título do Vídeo:")
+            novo_link = st.text_input("Link do YouTube:")
+            if st.button("➕ Adicionar Vídeo"):
+                if novo_titulo and novo_link:
                     AULAS_DO_CANAL.append({"titulo": novo_titulo, "link": novo_link})
                     conteudo_json = json.dumps(AULAS_DO_CANAL, ensure_ascii=False, indent=4)
                     if enviar_arquivo_github(JSON_PATH, conteudo_json.encode('utf-8'), "Atualizando lista de vídeos"):
-                        st.success("Vídeo adicionado com sucesso!")
+                        st.success("Vídeo adicionado!")
                         st.rerun()
+                    else:
+                        st.error("Erro ao salvar no GitHub.")
+                else:
+                    st.warning("Preencha todos os campos do vídeo.")
+        elif senha != "":
+            st.error("❌ Senha incorreta!")
 
 # ==============================================================================
 # 💬 ÁREA PRINCIPAL DO CHAT (INTERAÇÃO DO ALUNO)
 # ==============================================================================
-# Exibe o histórico de mensagens na tela principal
+# Exibe o histórico existente na tela
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
@@ -187,11 +192,7 @@ for msg in st.session_state.messages:
                 key=f"dl_{st.session_state.messages.index(msg)}"
             )
 
-# Caixa para o aluno digitar a pergunta (Aparece fixada na parte inferior da tela)
+# Caixa de diálogo com o aluno
 if pronto := st.chat_input("Pergunte algo sobre Ciências (ex: Por que o céu é azul?)"):
     
-    # 1. Mostra e salva a pergunta do aluno
-    st.session_state.messages.append({"role": "user", "content": pronto})
-    with st.chat_message("user"):
-        st.markdown(pronto)
-        
+    # Exibe imediatamente o texto do usuário
