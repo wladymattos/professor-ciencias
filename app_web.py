@@ -19,7 +19,7 @@ st.set_page_config(page_title="Robô Professor de Ciências", page_icon="🧬", 
 
 # Credenciais de Integração com o GitHub API
 GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", "")
-GITHUB_REPO = st.secrets.get("GITHUB_REPO", "") # Deve ser no formato: "usuario/repositorio"
+GITHUB_REPO = st.secrets.get("GITHUB_REPO", "") 
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
 
 # Pastas padrões de armazenamento local
@@ -47,11 +47,10 @@ def gerar_pdf_resposta(pergunta, resposta):
     return buffer
 
 # ------------------------------------------------------------------------------
-# 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API (CORRIGIDAS)
+# 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API
 # ------------------------------------------------------------------------------
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
-    # Corrigido para utilizar o endpoint correto da API REST do GitHub
-    url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{caminho_repositorio}"
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}", 
         "Accept": "application/vnd.github.v3+json"
@@ -71,8 +70,7 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
         return False
 
 def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
-    # Corrigido para utilizar o endpoint correto da API REST do GitHub
-    url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{caminho_repositorio}"
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}", 
         "Accept": "application/vnd.github.v3+json"
@@ -82,7 +80,7 @@ def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
         r = requests.get(url, headers=headers)
         if r.status_code == 200:
             sha = r.json().get("sha")
-            dados = {"message": mensaje_commit, "sha": sha}
+            dados = {"message": mensagem_commit, "sha": sha}
             res = requests.delete(url, headers=headers, json=dados)
             return res.status_code == 200
         return False
@@ -110,7 +108,6 @@ def inicializar_sistema_completo():
         st.error("⚠️ Chave GOOGLE_API_KEY não configurada nos Secrets!")
         st.stop()
     return genai.Client(api_key=chave_api)
-
 ai_client = inicializar_sistema_completo()
 system_prompt = "Você é um robô professor de ciências didático. Responda de forma clara, educativa e sempre em português do Brasil."
 
@@ -159,7 +156,6 @@ with st.sidebar:
                 if upload_pdf is not None and st.button("Salvar PDF"):
                     caminho_final_pdf = f"materiais/{upload_pdf.name}"
                     if enviar_arquivo_github(caminho_final_pdf, upload_pdf.getvalue(), f"Adicionando {upload_pdf.name}"):
-                        # Salva localmente para atualizar a interface imediatamente
                         with open(os.path.join(PASTA_MATERIAIS, upload_pdf.name), "wb") as f:
                             f.write(upload_pdf.getvalue())
                         st.success("Salvo com sucesso!")
@@ -170,12 +166,11 @@ with st.sidebar:
                     if st.button("❌ Deletar Selecionado", type="primary"):
                         caminho_deletar_pdf = f"materiais/{arq_selecionado}"
                         if deletar_arquivo_github(caminho_deletar_pdf, f"Deletando {arq_selecionado}"):
-                            # Remove localmente para atualizar a interface imediatamente
                             os.remove(os.path.join(PASTA_MATERIAIS, arq_selecionado))
                             st.success("Apagado com sucesso!")
                             st.rerun()
             
-                      with aba_video:
+            with aba_video:
                 st.markdown("**Upload de Videoaulas**")
                 upload_video = st.file_uploader("Escolha o arquivo de vídeo:", type=["mp4", "mov", "avi"])
                 if upload_video is not None and st.button("Salvar Vídeo"):
@@ -194,3 +189,65 @@ with st.sidebar:
                             os.remove(os.path.join(PASTA_VIDEOS, vid_selecionado))
                             st.success("Vídeo Apagado com sucesso!")
                             st.rerun()
+
+# ==============================================================================
+# 💬 INTERFACE DE CHAT (ÁREA PRINCIPAL)
+# ==============================================================================
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+        if message["role"] == "assistant" and "pdf_data" in message:
+            st.download_button(
+                label="📥 Baixar Resposta em PDF", 
+                data=message["pdf_data"],
+                file_name="resposta_ciencias.pdf", 
+                mime="application/pdf", 
+                key=f"dl_{message['id']}"
+            )
+
+if prompt := st.chat_input("Pergunte algo sobre ciências..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        message_placeholder = st.empty()
+        with st.spinner("Respondendo..."):
+            try:
+                contents = []
+                for msg in st.session_state.messages[:-1]:
+                    contents.append(types.Content(
+                        role="user" if msg["role"] == "user" else "model",
+                        parts=[types.Part.from_text(text=msg["content"])]
+                    ))
+                contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
+
+                response = ai_client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=contents,
+                    config=types.GenerateContentConfig(system_instruction=system_prompt),
+                )
+                resposta_texto = response.text
+                message_placeholder.markdown(resposta_texto)
+                
+                pdf_buffer = gerar_pdf_resposta(prompt, resposta_texto)
+                pdf_bytes = pdf_buffer.getvalue()
+                
+                msg_id = len(st.session_state.messages)
+                st.download_button(
+                    label="📥 Baixar Resposta em PDF", 
+                    data=pdf_bytes,
+                    file_name="resposta_ciencias.pdf", 
+                    mime="application/pdf", 
+                    key=f"dl_{msg_id}"
+                )
+                
+                st.session_state.messages.append({
+                    "role": "assistant", 
+                    "content": resposta_texto, 
+                    "pdf_data": pdf_bytes, 
+                    "id": msg_id
+                })
+                
+            except Exception as e:
+                st.error(f"Erro ao processar resposta da IA: {e}")
