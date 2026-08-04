@@ -159,7 +159,6 @@ with st.sidebar:
 
             st.markdown("---")
             st.markdown("**Vídeos (YouTube)**")
-            # Fora de formulários complexos para evitar bugs de recarregamento
             novo_titulo = st.text_input("Título do Vídeo:")
             novo_link = st.text_input("Link do YouTube:")
             if st.button("➕ Adicionar Vídeo"):
@@ -193,6 +192,9 @@ for msg in st.session_state.messages:
             )
 
 # Caixa de diálogo com o aluno
-if pronto := st.chat_input("Pergunte algo sobre Ciências (ex: Por que o céu é azul?)"):
-    
+pronto = st.chat_input("Pergunte algo sobre Ciências (ex: Por que o céu é azul?)")
+
+if pronto:
     # Exibe imediatamente o texto do usuário
+    st.session_state.messages.append({"role": "user", "content": pronto})
+    with st.chat_message("user"):
