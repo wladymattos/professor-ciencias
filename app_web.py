@@ -47,14 +47,11 @@ def gerar_pdf_resposta(pergunta, resposta):
 
 import re
 # ------------------------------------------------------------------------------
-# 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API (CORRIGIDO)
+# 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API (VERSÃO BLINDADA)
 # ------------------------------------------------------------------------------
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
-    # Remove as barras das pontas do repositório para evitar links duplicados
-    repo_limpo = GITHUB_REPO.strip("/")
-    
-    # CORREÇÃO CRÍTICA: A URL precisa apontar obrigatoriamente para ://github.com
-    url = f"https://://github.com{repo_limpo}/contents/{caminho_repositorio}"
+    # Força a URL exata e correta da API do GitHub escrevendo o caminho por extenso
+    url = f"https://github.com{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
     try:
@@ -71,11 +68,8 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
         return False
 
 def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
-    # Remove as barras das pontas do repositório para evitar links duplicados
-    repo_limpo = GITHUB_REPO.strip("/")
-    
-    # CORREÇÃO CRÍTICA: A URL precisa apontar obrigatoriamente para ://github.com
-    url = f"https://://github.com{repo_limpo}/contents/{caminho_repositorio}"
+    # Força a URL exata e correta da API do GitHub escrevendo o caminho por extenso
+    url = f"https://github.com{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
     try:
@@ -89,8 +83,7 @@ def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
     except Exception as e:
         st.error(f"Erro ao deletar no GitHub: {e}")
         return False
-
-
+        
 def get_base64_image(image_path):
     if os.path.exists(image_path):
         with open(image_path, "rb") as img_file:
