@@ -189,7 +189,7 @@ if pergunta_aluno := st.chat_input("Digite sua dúvida de Ciências aqui..."):
         st.markdown(pergunta_aluno)
     st.session_state.messages.append({"role": "user", "content": pergunta_aluno})
 
-    # 2. Processa a resposta do modelo
+     # 2. Processa a resposta do modelo
     with st.chat_message("assistant"):
         resposta_placeholder = st.empty()
         with st.spinner("Pensando... 🧬"):
