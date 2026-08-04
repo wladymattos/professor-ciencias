@@ -47,10 +47,9 @@ def gerar_pdf_resposta(pergunta, resposta):
     return buffer
 
 # ------------------------------------------------------------------------------
-# 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API (CORRIGIDA)
+# 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API
 # ------------------------------------------------------------------------------
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
-    # CORREÇÃO: URL oficial da API do GitHub para conteúdos
     url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
@@ -68,7 +67,6 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
         return False
 
 def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
-    # CORREÇÃO: URL oficial da API do GitHub para conteúdos
     url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
@@ -131,8 +129,10 @@ with st.sidebar:
     arquivos_pdf = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
     if arquivos_pdf:
         for i, nome_arquivo in enumerate(arquivos_pdf):
-            with open(os.path.join(PASTA_MATERIAIS, nome_arquivo), "rb") as file:
-                st.download_button(label=f"📥 Baixar {nome_arquivo.replace('.pdf', '')}", data=file, file_name=nome_arquivo, mime="application/pdf", key=f"mat_dinamico_{i}")
+            caminho_pdf_local = os.path.join(PASTA_MATERIAIS, nome_arquivo)
+            if os.path.exists(caminho_pdf_local):
+                with open(caminho_pdf_local, "rb") as file:
+                    st.download_button(label=f"📥 Baixar {nome_arquivo.replace('.pdf', '')}", data=file, file_name=nome_arquivo, mime="application/pdf", key=f"mat_dinamico_{i}")
 
     st.markdown("---")
     if st.button("🗑️ Limpar Conversa", key="clear_chat"):
@@ -152,7 +152,6 @@ with st.sidebar:
                 upload_pdf = st.file_uploader("Escolha o arquivo PDF:", type=["pdf"])
                 if upload_pdf is not None and st.button("Salvar PDF"):
                     caminho_final_pdf = f"materiais/{upload_pdf.name}"
-                    # Salva localmente para atualizar o painel imediatamente
                     with open(os.path.join(PASTA_MATERIAIS, upload_pdf.name), "wb") as f:
                         f.write(upload_pdf.getvalue())
                     
@@ -165,8 +164,9 @@ with st.sidebar:
                     if st.button("❌ Deletar Selecionado", type="primary"):
                         caminho_deletar_pdf = f"materiais/{arq_selecionado}"
                         if deletar_arquivo_github(caminho_deletar_pdf, f"Deletando {arq_selecionado}"):
-                            # Remove localmente também
-                            os.remove(os.path.join(PASTA_MATERIAIS, arq_selecionado))
+                            caminho_remover = os.path.join(PASTA_MATERIAIS, arq_selecionado)
+                            if os.path.exists(caminho_remover):
+                                os.remove(caminho_remover)
                             st.success("Apagado com sucesso!")
                             st.rerun()
             
@@ -175,7 +175,6 @@ with st.sidebar:
                 upload_video = st.file_uploader("Escolha o arquivo de vídeo:", type=["mp4", "mov", "avi"])
                 if upload_video is not None and st.button("Salvar Vídeo"):
                     caminho_final_video = f"videos/{upload_video.name}"
-                    # Salva localmente para atualizar o painel imediatamente
                     with open(os.path.join(PASTA_VIDEOS, upload_video.name), "wb") as f:
                         f.write(upload_video.getvalue())
                         
@@ -188,8 +187,9 @@ with st.sidebar:
                     if st.button("❌ Deletar Vídeo Selecionado", type="primary"):
                         caminho_deletar_video = f"videos/{vid_selecionado}"
                         if deletar_arquivo_github(caminho_deletar_video, f"Deletando video {vid_selecionado}"):
-                            # Remove localmente também
-                            os.remove(os.path.join(PASTA_VIDEOS, vid_selecionado))
+                            caminho_remover_vid = os.path.join(PASTA_VIDEOS, vid_selecionado)
+                            if os.path.exists(caminho_remover_vid):
+                                os.remove(caminho_remover_vid)
                             st.success("Vídeo Apagado com sucesso!")
                             st.rerun()
 
