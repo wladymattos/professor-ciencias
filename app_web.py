@@ -17,9 +17,7 @@ from reportlab.lib import colors
 # Configuração da página Web básica e centralizada
 st.set_page_config(page_title="Robô Professor de Ciências", page_icon="🧬", layout="centered")
 
-# Credenciais de Integração com o GitHub API
-GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", "")
-GITHUB_REPO = st.secrets.get("GITHUB_REPO", "") # Formato obrigatório: "usuario/repositorio"
+# Credenciais de Integração
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
 
 # Pastas padrões de armazenamento local
@@ -46,84 +44,54 @@ def gerar_pdf_resposta(pergunta, resposta):
     buffer.seek(0)
     return buffer
 
-# ------------------------------------------------------------------------------
-# 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API (CORRIGIDA)
-# ------------------------------------------------------------------------------
-def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
-    url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
-    headers = {
-        "Authorization": f"token {GITHUB_TOKEN}", 
-        "Accept": "application/vnd.github.v3+json"
-    }
-    
-    try:
-        r = requests.get(url, headers=headers)
-        sha = r.json().get("sha") if r.status_code == 200 else None
-        conteudo_base64 = base64.b64encode(conteudo_bytes).decode("utf-8")
-        dados = {"message": mensagem_commit, "content": conteudo_base64}
-        if sha:
-            dados["sha"] = sha
-        res = requests.put(url, headers=headers, json=dados)
-        
-        # CORREÇÃO CRÍTICA: Definido o retorno correto para aceitar criação (201) ou atualização (200)
-        return res.status_code in [200, 201]
-    except Exception as e:
-        st.error(f"Erro na conexão com o GitHub: {e}")
-        return False
+def get_base64_image(image_path):
+    if os.path.exists(image_path):
+        with open(image_path, "rb") as img_file:
+            return base64.b64encode(img_file.read()).decode()
+    return None
 
-def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
-    url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
-    headers = {
-        "Authorization": f"token {GITHUB_TOKEN}", 
-        "Accept": "application/vnd.github.v3+json"
-    }
-    
-    try:
-        r = requests.get(url, headers=headers)
-        if r.status_code == 200:
-            sha = r.json().get("sha")
-            dados = {"message": mensagem_commit, "sha": sha}
-            res = requests.delete(url, headers=headers, json=dados)
-            return res.status_code == 200
-        return False
-    except Exception as e:
-        st.error(f"Erro ao deletar no GitHub: {e}")
-        return False
+img_base64 = get_base64_image("fundo.jpg")
+css_fundo = f'.stApp {{ background-image: url("data:image/jpg;base64,{img_base64}"); background-size: cover; background-attachment: fixed; }}' if img_base64 else '.stApp { background: linear-gradient(135deg, #eef5f3 0%, #dbe7e4 100%) !important; }'
+st.markdown(f"<style>{css_fundo} h1, h2, h3 {{ color: #1e3d33 !important; }} .stButton>button, .stDownloadButton>button {{ border-radius: 12px !important; background-color: #2a5c4d !important; color: white !important; width: 100%; }}</style>", unsafe_allow_html=True)
 
-def carregar_arquivos_do_github(pasta_repositorio):
-    url = f"https://github.com{GITHUB_REPO}/contents/{pasta_repositorio}"
-    headers = {
-        "Authorization": f"token {GITHUB_TOKEN}", 
-        "Accept": "application/vnd.github.v3+json"
-    }
-    arquivos_baixados = {}
-    try:
-        r = requests.get(url, headers=headers)
-        if r.status_code == 200:
-            itens = r.json()
-            if isinstance(itens, list):
-                for item in itens:
-                    if item.get("type") == "file":
-                        download_url = item.get("download_url")
-                        nome_arquivo = item.get("name")
-                        if download_url:
-                            resp_file = requests.get(download_url, headers=headers)
-                            if resp_file.status_code == 200:
-                                arquivos_baixados[nome_arquivo] = resp_file.content
-    except Exception:
-        pass
-    return arquivos_baixados
+st.title("🧬 Robô Professor de Ciências")
+st.markdown("---")
+
+@st.cache_resource
+def inicializar_sistema_completo():
+    chave_api = os.getenv("GOOGLE_API_KEY") or st.secrets.get("GOOGLE_API_KEY")
+    if not chave_api:
+        st.error("⚠️ Chave GOOGLE_API_KEY não configurada nos Secrets!")
+        st.stop()
+    return genai.Client(api_key=chave_api)
+
 ai_client = inicializar_sistema_completo()
 system_prompt = "Você é um robô professor de ciências didático. Responda de forma clara, educativa e sempre em português do Brasil."
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Puxa os dados salvos do repositório remoto permanentemente toda vez que o app inicia
-if "videos_memoria" not in st.session_state or not st.session_state.videos_memoria:
-    st.session_state.videos_memoria = carregar_arquivos_do_github(PASTA_VIDEOS)
-if "pdfs_memoria" not in st.session_state or not st.session_state.pdfs_memoria:
-    st.session_state.pdfs_memoria = carregar_arquivos_do_github(PASTA_MATERIAIS)
+# Inicializa as listas na memória persistente da sessão do Streamlit
+if "videos_memoria" not in st.session_state:
+    st.session_state.videos_memoria = {}
+if "pdfs_memoria" not in st.session_state:
+    st.session_state.pdfs_memoria = {}
+
+# Sincroniza os arquivos físicos existentes nas pastas locais caso existam no servidor
+try:
+    for f in os.listdir(PASTA_VIDEOS):
+        caminho = os.path.join(PASTA_VIDEOS, f)
+        if f.endswith(('.mp4', '.mov', '.avi')) and os.path.getsize(caminho) > 0 and f not in st.session_state.videos_memoria:
+            with open(caminho, "rb") as vf:
+                st.session_state.videos_memoria[f] = vf.read()
+                
+    for f in os.listdir(PASTA_MATERIAIS):
+        caminho = os.path.join(PASTA_MATERIAIS, f)
+        if f.endswith('.pdf') and os.path.getsize(caminho) > 0 and f not in st.session_state.pdfs_memoria:
+            with open(caminho, "rb") as pf:
+                st.session_state.pdfs_memoria[f] = pf.read()
+except Exception:
+    pass
 
 # ==============================================================================
 # 🧼 BARRA LATERAL FIXA DO ALUNO + GERENCIADOR DO PROFESSOR (ADMIN)
@@ -191,54 +159,52 @@ with st.sidebar:
                 upload_pdf = st.file_uploader("Escolha o arquivo PDF:", type=["pdf"])
                 if upload_pdf is not None and st.button("Salvar PDF"):
                     conteudo_pdf = upload_pdf.getvalue()
-                    caminho_final_pdf = f"materiais/{upload_pdf.name}"
-                    
-                    # CORREÇÃO: Só salva na memória local e avança se o GitHub aceitar o envio definitivo
-                    if enviar_arquivo_github(caminho_final_pdf, conteudo_pdf, f"Adicionando {upload_pdf.name}"):
-                        st.session_state.pdfs_memoria[upload_pdf.name] = conteudo_pdf
-                        st.success("Salvo permanentemente com sucesso!")
-                        st.rerun()
-                    else:
-                        st.error("⚠️ Falha ao salvar no GitHub! Verifique seus Secrets (TOKEN ou REPO).")
+                    st.session_state.pdfs_memoria[upload_pdf.name] = conteudo_pdf
+                    with open(os.path.join(PASTA_MATERIAIS, upload_pdf.name), "wb") as f:
+                        f.write(conteudo_pdf)
+                    st.success("Salvo com sucesso!")
+                    st.rerun()
                 
                 if st.session_state.pdfs_memoria:
                     arq_selecionado = st.selectbox("Apagar PDF:", list(st.session_state.pdfs_memoria.keys()))
-                    if st.button("❌ Deletar Selecionado", type="primary"):
-                        caminho_deletar_pdf = f"materiais/{arq_selecionado}"
-                        if deletar_arquivo_github(caminho_deletar_pdf, f"Deletando {arq_selecionado}"):
-                            if arq_selecionado in st.session_state.pdfs_memoria:
-                                del st.session_state.pdfs_memoria[arq_selecionado]
-                            st.success("Apagado do GitHub!")
-                            st.rerun()
-                        else:
-                            st.error("Falha ao apagar no repositório.")
+                    if st.button("❌ Deletar Selecionado", type="primary", key="del_pdf_btn"):
+                        if arq_selecionado in st.session_state.pdfs_memoria:
+                            del st.session_state.pdfs_memoria[arq_selecionado]
+                        try:
+                            os.remove(os.path.join(PASTA_MATERIAIS, arq_selecionado))
+                        except Exception:
+                            pass
+                        st.success("Apagado com sucesso!")
+                        st.rerun()
             
             with aba_video:
                 st.markdown("**Upload de Videoaulas**")
                 upload_video = st.file_uploader("Escolha o arquivo de vídeo:", type=["mp4", "mov", "avi"])
                 if upload_video is not None and st.button("Salvar Vídeo"):
                     conteudo_video = upload_video.getvalue()
-                    caminho_final_video = f"videos/{upload_video.name}"
-                    
-                    # CORREÇÃO: Só consolida na interface se o arquivo for de fato guardado no GitHub remoto
-                    if enviar_arquivo_github(caminho_final_video, conteudo_video, f"Adicionando video {upload_video.name}"):
-                        st.session_state.videos_memoria[upload_video.name] = conteudo_video
-                        st.success("Vídeo Gravado permanentemente no GitHub!")
-                        st.rerun()
-                    else:
-                        st.error("⚠️ O GitHub rejeitou o vídeo. Verifique se o TOKEN tem permissões ou se o arquivo é grande demais.")
+                    st.session_state.videos_memoria[upload_video.name] = conteudo_video
+                    with open(os.path.join(PASTA_VIDEOS, upload_video.name), "wb") as f:
+                        f.write(conteudo_video)
+                    st.success("Vídeo Salvo com sucesso!")
+                    st.rerun()
                 
                 if st.session_state.videos_memoria:
                     vid_selecionado = st.selectbox("Apagar Vídeo:", list(st.session_state.videos_memoria.keys()))
-                    if st.button("❌ Deletar Vídeo Selecionado", type="primary"):
-                        caminho_deletar_video = f"videos/{vid_selecionado}"
-                        if deletar_arquivo_github(caminho_deletar_video, f"Deletando video {vid_selecionado}"):
-                            if vid_selecionado in st.session_state.videos_memoria:
-                                del st.session_state.videos_memoria[vid_selecionado]
-                            st.success("Vídeo removido do repositório!")
-                            st.rerun()
-                        else:
-                            st.error("Falha ao apagar vídeo no repositório.")
+                    if st.button("❌ Deletar Vídeo Selecionado", type="primary", key="del_vid_btn"):
+                        if vid_selecionado in st.session_state.videos_memoria:
+                            del st.session_state.videos_memoria[vid_selecionado]
+                        try:
+                            os.remove(os.path.join(PASTA_VIDEOS, vid_selecionado))
+                        except Exception:
+                            pass
+                        st.success("Vídeo Apagado com sucesso!")
+                        st.rerun()
+
+# ==============================================================================
+# 💬 INTERFACE DE CHAT (ÁREA PRINCIPAL)
+# ==============================================================================
+for message in st.session_state.messages:
+
 
 # ==============================================================================
 # 💬 INTERFACE DE CHAT (ÁREA PRINCIPAL)
