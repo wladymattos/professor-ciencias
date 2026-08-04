@@ -45,17 +45,25 @@ def gerar_pdf_resposta(pergunta, resposta):
     buffer.seek(0)
     return buffer
 
+import re
+
 # ------------------------------------------------------------------------------
 # 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API
 # ------------------------------------------------------------------------------
+def extrair_repo_valido(repo_string):
+    # Procura pelo padrão 'usuario/repositorio' ignorando links, protocolos ou símbolos extras
+    match = re.search(r'([^:\s/]+/[^:\s/]+)$', repo_string.strip().rstrip('/'))
+    if match:
+        return match.group(1)
+    # Caso não encontre, remove barras das pontas como segurança de fallback
+    return repo_string.strip("/")
+
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
-    # BLINDAGEM: Remove qualquer link, protocolo ou domínio que o usuário possa ter colocado no Secret
-    repo_limpo = GITHUB_REPO.replace("https://", "").replace("http://", "")
-    repo_limpo = repo_limpo.replace("://github.com", "").replace("github.com", "")
-    repo_limpo = repo_limpo.strip("/")
+    # Extrai estritamente 'wladymattos/professor-ciencias' independente do que esteja no Secret
+    repo_limpo = extrair_repo_valido(GITHUB_REPO)
     
-    # Monta a URL estritamente no padrão correto da API do GitHub
-    url = f"https://api.://github.comrepos/{repo_limpo}/contents/{caminho_repositorio}"
+    # URL reconstruída do zero sem nenhuma interferência de strings corrompidas
+    url = f"https://github.com{repo_limpo}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
     try:
@@ -72,13 +80,11 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
         return False
 
 def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
-    # BLINDAGEM: Remove qualquer link, protocolo ou domínio que o usuário possa ter colocado no Secret
-    repo_limpo = GITHUB_REPO.replace("https://", "").replace("http://", "")
-    repo_limpo = repo_limpo.replace("://github.com", "").replace("github.com", "")
-    repo_limpo = repo_limpo.strip("/")
+    # Extrai estritamente 'wladymattos/professor-ciencias' independente do que esteja no Secret
+    repo_limpo = extrair_repo_valido(GITHUB_REPO)
     
-    # Monta a URL estritamente no padrão correto da API do GitHub
-    url = f"https://api.://github.comrepos/{repo_limpo}/contents/{caminho_repositorio}"
+    # URL reconstruída do zero sem nenhuma interferência de strings corrompidas
+    url = f"https://github.com{repo_limpo}/contents/{caminho_repositorio}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
     try:
