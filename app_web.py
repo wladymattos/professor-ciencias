@@ -116,9 +116,9 @@ if "messages" not in st.session_state:
 with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
     
-    st.markdown("### 🎥 Assistir Aulas Gravadas")
+        st.markdown("### 🎥 Assistir Aulas Gravadas")
     arquivos_video = [f for f in os.listdir(PASTA_VIDEOS) if f.endswith(('.mp4', '.mov', '.avi'))]
-        if arquivos_video:
+    if arquivos_video:
         for i, nome_video in enumerate(arquivos_video):
             st.markdown(f"**▶️ {nome_video}**")
             with open(os.path.join(PASTA_VIDEOS, nome_video), "rb") as video_file:
