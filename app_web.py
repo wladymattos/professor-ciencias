@@ -4,6 +4,7 @@ import requests
 import streamlit as st
 import numpy as np
 import base64
+import re
 from io import BytesIO
 from sentence_transformers import SentenceTransformer
 from google import genai
@@ -18,7 +19,7 @@ st.set_page_config(page_title="Robô Professor de Ciências", page_icon="🧬", 
 
 # Credenciais de Integração com o GitHub API
 GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", "")
-GITHUB_REPO = st.secrets.get("GITHUB_REPO", "")
+GITHUB_REPO = st.secrets.get("GITHUB_REPO", "") # Deve ser no formato: "usuario/repositorio"
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
 
 # Pastas padrões de armazenamento local
@@ -45,14 +46,16 @@ def gerar_pdf_resposta(pergunta, resposta):
     buffer.seek(0)
     return buffer
 
-import re
 # ------------------------------------------------------------------------------
-# 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API (VERSÃO BLINDADA)
+# 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API (CORRIGIDAS)
 # ------------------------------------------------------------------------------
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
-    # Força a URL exata e correta da API do GitHub escrevendo o caminho por extenso
-    url = f"https://github.com{caminho_repositorio}"
-    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+    # Corrigido para utilizar o endpoint correto da API REST do GitHub
+    url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}", 
+        "Accept": "application/vnd.github.v3+json"
+    }
     
     try:
         r = requests.get(url, headers=headers)
@@ -62,21 +65,24 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
         if sha:
             dados["sha"] = sha
         res = requests.put(url, headers=headers, json=dados)
-        return res.status_code == 200 or res.status_code == 201
+        return res.status_code in [200, 201]
     except Exception as e:
         st.error(f"Erro na conexão com o GitHub: {e}")
         return False
 
 def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
-    # Força a URL exata e correta da API do GitHub escrevendo o caminho por extenso
-    url = f"https://github.com{caminho_repositorio}"
-    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+    # Corrigido para utilizar o endpoint correto da API REST do GitHub
+    url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}", 
+        "Accept": "application/vnd.github.v3+json"
+    }
     
     try:
         r = requests.get(url, headers=headers)
         if r.status_code == 200:
             sha = r.json().get("sha")
-            dados = {"message": mensagem_commit, "sha": sha}
+            dados = {"message": mensaje_commit, "sha": sha}
             res = requests.delete(url, headers=headers, json=dados)
             return res.status_code == 200
         return False
@@ -112,19 +118,17 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # ==============================================================================
-# 🧼 BARRA LATERAL FIXA DO ALUNO + GERENCIADOR DO PROFESSOR (ADMIN) - ATUALIZADO
+# 🧼 BARRA LATERAL FIXA DO ALUNO + GERENCIADOR DO PROFESSOR (ADMIN)
 # ==============================================================================
 with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
     
     st.markdown("### 🎥 Assistir Aulas Gravadas")
     arquivos_video = [f for f in os.listdir(PASTA_VIDEOS) if f.endswith(('.mp4', '.mov', '.avi'))]
-        if arquivos_video:
+    if arquivos_video:
         for i, nome_video in enumerate(arquivos_video):
             st.markdown(f"**▶️ {nome_video}**")
-            caminho_vid = os.path.join(PASTA_VIDEOS, nome_video)
-            dados_video = open(caminho_vid, "rb").read()
-            st.video(dados_video, format="video/mp4", key=f"player_local_{i}")
+            st.video(os.path.join(PASTA_VIDEOS, nome_video), format="video/mp4", key=f"player_local_{i}")
     else:
         st.info("Nenhum vídeo disponível.")
 
@@ -153,18 +157,21 @@ with st.sidebar:
                 st.markdown("**Upload de Apostilas**")
                 upload_pdf = st.file_uploader("Escolha o arquivo PDF:", type=["pdf"])
                 if upload_pdf is not None and st.button("Salvar PDF"):
-                    # Correção: Envia o caminho relativo correto dentro da pasta materiais
                     caminho_final_pdf = f"materiais/{upload_pdf.name}"
                     if enviar_arquivo_github(caminho_final_pdf, upload_pdf.getvalue(), f"Adicionando {upload_pdf.name}"):
+                        # Salva localmente para atualizar a interface imediatamente
+                        with open(os.path.join(PASTA_MATERIAIS, upload_pdf.name), "wb") as f:
+                            f.write(upload_pdf.getvalue())
                         st.success("Salvo com sucesso!")
                         st.rerun()
                 
                 if arquivos_pdf:
                     arq_selecionado = st.selectbox("Apagar PDF:", arquivos_pdf)
                     if st.button("❌ Deletar Selecionado", type="primary"):
-                        # Correção: Passa o caminho completo correto para a API deletar no GitHub
                         caminho_deletar_pdf = f"materiais/{arq_selecionado}"
                         if deletar_arquivo_github(caminho_deletar_pdf, f"Deletando {arq_selecionado}"):
+                            # Remove localmente para atualizar a interface imediatamente
+                            os.remove(os.path.join(PASTA_MATERIAIS, arq_selecionado))
                             st.success("Apagado com sucesso!")
                             st.rerun()
             
@@ -172,79 +179,17 @@ with st.sidebar:
                 st.markdown("**Upload de Videoaulas**")
                 upload_video = st.file_uploader("Escolha o arquivo de vídeo:", type=["mp4", "mov", "avi"])
                 if upload_video is not None and st.button("Salvar Vídeo"):
-                    # Correção: Envia o caminho relativo correto dentro da pasta videos
                     caminho_final_video = f"videos/{upload_video.name}"
                     if enviar_arquivo_github(caminho_final_video, upload_video.getvalue(), f"Adicionando video {upload_video.name}"):
+                        # Salva localmente para atualizar a interface imediatamente
+                        with open(os.path.join(PASTA_VIDEOS, upload_video.name), "wb") as f:
+                            f.write(upload_video.getvalue())
                         st.success("Vídeo Salvo com sucesso!")
                         st.rerun()
                 
                 if arquivos_video:
                     vid_selecionado = st.selectbox("Apagar Vídeo:", arquivos_video)
                     if st.button("❌ Deletar Vídeo Selecionado", type="primary"):
-                        # Correção: Passa o caminho completo correto para a API deletar no GitHub
                         caminho_deletar_video = f"videos/{vid_selecionado}"
                         if deletar_arquivo_github(caminho_deletar_video, f"Deletando video {vid_selecionado}"):
-                            st.success("Vídeo Apagado com sucesso!")
-                            st.rerun()
-# FIM DA PARTE 1
-# ==============================================================================
-# 💬 INTERFACE DE CHAT (ÁREA PRINCIPAL)
-# ==============================================================================
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-        if message["role"] == "assistant" and "pdf_data" in message:
-            st.download_button(
-                label="📥 Baixar Resposta em PDF", 
-                data=message["pdf_data"],
-                file_name="resposta_ciencias.pdf", 
-                mime="application/pdf", 
-                key=f"dl_{message['id']}"
-            )
-
-if prompt := st.chat_input("Pergunte algo sobre ciências..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        with st.spinner("Respondendo..."):
-            try:
-                contents = []
-                for msg in st.session_state.messages[:-1]:
-                    contents.append(types.Content(
-                        role="user" if msg["role"] == "user" else "model",
-                        parts=[types.Part.from_text(text=msg["content"])]
-                    ))
-                contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
-
-                response = ai_client.models.generate_content(
-                    model='gemini-3.6-flash',
-                    contents=contents,
-                    config=types.GenerateContentConfig(system_instruction=system_prompt),
-                )
-                resposta_texto = response.text
-                message_placeholder.markdown(resposta_texto)
-                
-                pdf_buffer = gerar_pdf_resposta(prompt, resposta_texto)
-                pdf_bytes = pdf_buffer.getvalue()
-                
-                msg_id = len(st.session_state.messages)
-                st.download_button(
-                    label="📥 Baixar Resposta em PDF", 
-                    data=pdf_bytes,
-                    file_name="resposta_ciencias.pdf", 
-                    mime="application/pdf", 
-                    key=f"dl_{msg_id}"
-                )
-                
-                st.session_state.messages.append({
-                    "role": "assistant", 
-                    "content": resposta_texto, 
-                    "pdf_data": pdf_bytes, 
-                    "id": msg_id
-                })
-                
-            except Exception as e:
-                st.error(f"Erro ao processar resposta da IA: {e}")
+                            # Remove localmente para atualizar a interface imediatamente
