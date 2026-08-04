@@ -196,5 +196,3 @@ pronto = st.chat_input("Pergunte algo sobre Ciências (ex: Por que o céu é azu
 
 if pronto:
     # Salva no histórico e exibe imediatamente o texto do usuário
-    st.session_state.messages.append({"role": "user", "content": pronto})
-    with st.chat_message("user"):
