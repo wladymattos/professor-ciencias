@@ -104,7 +104,7 @@ def inicializar_sistema_completo():
     return genai.Client(api_key=chave_api, http_options={'api_version': 'v1'})
 
 ai_client = inicializar_sistema_completo()
-system_prompt = "Você é um robô professor de ciências didático. Responda de forma clara e educativa."
+system_prompt = "Você é um robô professor de ciências didático. Responda de forma clara e educativa e em português."
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -161,32 +161,37 @@ with st.sidebar:
             st.markdown("**Vídeos (YouTube)**")
             with st.form("nova_aula_form"):
                 novo_titulo = st.text_input("Título")
-                novo_link = st.text_input("Link")
-                if st.form_submit_button("Salvar Vídeo") and novo_titulo and novo_link:
+                novo_link = st.text_input("Link do YouTube")
+                submit_aula = st.form_submit_button("Adicionar Vídeo")
+                
+                if submit_aula and novo_titulo and novo_link:
                     AULAS_DO_CANAL.append({"titulo": novo_titulo, "link": novo_link})
-                    enviar_arquivo_github(JSON_PATH, json.dumps(AULAS_DO_CANAL, indent=4, ensure_ascii=False).encode("utf-8"), "Atualizando vídeos")
-                    st.success("Cadastrado!")
-                    st.rerun()
-            
-            if AULAS_DO_CANAL:
-                st.write("Lista de Vídeos:")
-                for idx, item in enumerate(AULAS_DO_CANAL):
-                    col1, col2 = st.columns(2)
-                    col1.write(item['titulo'])
-                    if col2.button("Apagar", key=f"del_aula_{idx}"):
-                        AULAS_DO_CANAL.pop(idx)
-                        enviar_arquivo_github(JSON_PATH, json.dumps(AULAS_DO_CANAL, indent=4, ensure_ascii=False).encode("utf-8"), "Removendo vídeo")
+                    conteudo_json = json.dumps(AULAS_DO_CANAL, ensure_ascii=False, indent=4)
+                    if enviar_arquivo_github(JSON_PATH, conteudo_json.encode('utf-8'), "Atualizando lista de vídeos"):
+                        st.success("Vídeo adicionado com sucesso!")
                         st.rerun()
-        elif senha != "":
-            st.error("Senha incorreta!")
 
 # ==============================================================================
-# 💬 FLUXO DO CHAT DO ALUNO
+# 💬 ÁREA PRINCIPAL DO CHAT (INTERAÇÃO DO ALUNO)
 # ==============================================================================
-if not st.session_state.messages:
-    st.info("👋 **Olá, cientista!** Utilize a barra lateral para acessar as aulas e materiais ou digite sua dúvida sobre Ciências na caixa abaixo!")
+# Exibe o histórico de mensagens na tela principal
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+        if msg["role"] == "assistant" and "pdf" in msg:
+            st.download_button(
+                label="📥 Baixar esta resposta em PDF",
+                data=base64.b64decode(msg["pdf"]),
+                file_name="resposta_ciencias.pdf",
+                mime="application/pdf",
+                key=f"dl_{st.session_state.messages.index(msg)}"
+            )
 
-# Renderiza o histórico na tela de forma estável (INDENTAÇÃO CORRIGIDA DE FORMA ESTRITA)
-for i, message in enumerate(st.session_state.messages):
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+# Caixa para o aluno digitar a pergunta (Aparece fixada na parte inferior da tela)
+if pronto := st.chat_input("Pergunte algo sobre Ciências (ex: Por que o céu é azul?)"):
+    
+    # 1. Mostra e salva a pergunta do aluno
+    st.session_state.messages.append({"role": "user", "content": pronto})
+    with st.chat_message("user"):
+        st.markdown(pronto)
+        
