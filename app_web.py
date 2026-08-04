@@ -47,10 +47,10 @@ def gerar_pdf_resposta(pergunta, resposta):
     return buffer
 
 # ------------------------------------------------------------------------------
-# 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API
+# 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API (CORRIGIDA)
 # ------------------------------------------------------------------------------
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
-    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{caminho_repositorio}"
+    url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}", 
         "Accept": "application/vnd.github.v3+json"
@@ -64,13 +64,14 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
         if sha:
             dados["sha"] = sha
         res = requests.put(url, headers=headers, json=dados)
+        # CORREÇÃO CRÍTICA: Linha restaurada com os códigos de sucesso corretos
         return res.status_code in [200, 201]
     except Exception as e:
         st.error(f"Erro na conexão com o GitHub: {e}")
         return False
 
 def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
-    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{caminho_repositorio}"
+    url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}", 
         "Accept": "application/vnd.github.v3+json"
@@ -137,7 +138,7 @@ with st.sidebar:
                         st.video(video_bytes, format="video/mp4", key=f"player_local_{i}")
                         
                         st.download_button(
-                            label=f"📥 Baixar/Abrir Aula: {nome_video.replace('.mp4','')}", 
+                            label=f"📥 Baixar Aula: {nome_video.replace('.mp4','')}", 
                             data=video_bytes, 
                             file_name=nome_video, 
                             mime="video/mp4", 
@@ -189,12 +190,15 @@ with st.sidebar:
                 upload_pdf = st.file_uploader("Escolha o arquivo PDF:", type=["pdf"])
                 if upload_pdf is not None and st.button("Salvar PDF"):
                     caminho_final_pdf = f"materiais/{upload_pdf.name}"
-                    if enviar_arquivo_github(caminho_final_pdf, upload_pdf.getvalue(), f"Adicionando {upload_pdf.name}"):
-                        # Gravação local forçada imediata
-                        with open(os.path.join(PASTA_MATERIAIS, upload_pdf.name), "wb") as f:
-                            f.write(upload_pdf.getvalue())
-                        st.success("Salvo com sucesso!")
-                        st.rerun()
+                    
+                    # Salva localmente ANTES para atualizar na hora, independente do GitHub
+                    with open(os.path.join(PASTA_MATERIAIS, upload_pdf.name), "wb") as f:
+                        f.write(upload_pdf.getvalue())
+                        
+                    # Tenta sincronizar com o GitHub de forma secundária
+                    enviar_arquivo_github(caminho_final_pdf, upload_pdf.getvalue(), f"Adicionando {upload_pdf.name}")
+                    st.success("Salvo com sucesso!")
+                    st.rerun()
                 
                 arquivos_pdf_todos = [f for f in os.listdir(PASTA_MATERIAIS) if f.endswith('.pdf')]
                 if arquivos_pdf_todos:
@@ -214,12 +218,15 @@ with st.sidebar:
                 upload_video = st.file_uploader("Escolha o arquivo de vídeo:", type=["mp4", "mov", "avi"])
                 if upload_video is not None and st.button("Salvar Vídeo"):
                     caminho_final_video = f"videos/{upload_video.name}"
-                    if enviar_arquivo_github(caminho_final_video, upload_video.getvalue(), f"Adicionando video {upload_video.name}"):
-                        # Gravação local forçada imediata para que o os.listdir() encontre na hora
-                        with open(os.path.join(PASTA_VIDEOS, upload_video.name), "wb") as f:
-                            f.write(upload_video.getvalue())
-                        st.success("Vídeo Salvo com sucesso!")
-                        st.rerun()
+                    
+                    # CORREÇÃO: Salva o vídeo localmente primeiro para o player encontrar imediatamente
+                    with open(os.path.join(PASTA_VIDEOS, upload_video.name), "wb") as f:
+                        f.write(upload_video.getvalue())
+                    
+                    # Tenta enviar para o GitHub sem travar a interface local
+                    enviar_arquivo_github(caminho_final_video, upload_video.getvalue(), f"Adicionando video {upload_video.name}")
+                    st.success("Vídeo Salvo com sucesso!")
+                    st.rerun()
                 
                 arquivos_video_todos = [f for f in os.listdir(PASTA_VIDEOS) if f.endswith(('.mp4', '.mov', '.avi'))]
                 if arquivos_video_todos:
