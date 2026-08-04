@@ -181,12 +181,13 @@ with st.sidebar:
             st.error("Senha incorreta!")
 
 # ==============================================================================
-# 💬 FLUXO DO CHAT DO ALUNO (IMUTÁVEL E FIXADO NA PARTE PRINCIPAL DA TELA)
+# 💬 FLUXO DO CHAT DO ALUNO (CORRIGIDO: INPUT NO LUGAR CERTO)
 # ==============================================================================
 if not st.session_state.messages:
     st.info("👋 **Olá, cientista!** Utilize a barra lateral para acessar as aulas e materiais ou digite sua dúvida sobre Ciências na caixa abaixo!")
 
-# Renderiza o histórico de mensagens salvas de forma síncrona
+# 1. Renderiza o histórico na tela de forma estável
 for i, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
+        if message["role"] == "assistant":
