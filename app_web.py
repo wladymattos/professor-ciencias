@@ -199,9 +199,9 @@ if prompt := st.chat_input("Pergunte algo sobre ciências..."):
                     ))
                 contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
 
-                # Realiza a chamada para o Gemini usando a estrutura correta
+               # Realiza a chamada para o Gemini usando o modelo atualizado
                 response = ai_client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-3.5-flash', # Atualizado de 2.5-flash para 3.5-flash
                     contents=contents,
                     config=types.GenerateContentConfig(
                         system_instruction=system_prompt,
