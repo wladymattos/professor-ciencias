@@ -112,8 +112,12 @@ system_prompt = "Você é um robô professor de ciências didático. Responda de
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# ==============================================================================
+# 🧼 BARRA LATERAL FIXA DO ALUNO + GERENCIADOR DO PROFESSOR (ADMIN) - ATUALIZADO
+# ==============================================================================
 with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #2a5c4d;'>📌 Painel do Aluno</h2>", unsafe_allow_html=True)
+    
     st.markdown("### 🎥 Assistir Aulas Gravadas")
     arquivos_video = [f for f in os.listdir(PASTA_VIDEOS) if f.endswith(('.mp4', '.mov', '.avi'))]
     if arquivos_video:
@@ -143,31 +147,43 @@ with st.sidebar:
         if senha and senha == ADMIN_PASSWORD:
             st.success("🔒 Painel Liberado!")
             aba_pdf, aba_video = st.tabs(["📚 Apostilas (PDF)", "🎥 Vídeos (MP4)"])
+            
             with aba_pdf:
                 st.markdown("**Upload de Apostilas**")
                 upload_pdf = st.file_uploader("Escolha o arquivo PDF:", type=["pdf"])
                 if upload_pdf is not None and st.button("Salvar PDF"):
-                    if enviar_arquivo_github(f"materiais/{upload_pdf.name}", upload_pdf.getvalue(), f"Adicionando {upload_pdf.name}"):
-                        st.success("Salvo!")
+                    # Correção: Envia o caminho relativo correto dentro da pasta materiais
+                    caminho_final_pdf = f"materiais/{upload_pdf.name}"
+                    if enviar_arquivo_github(caminho_final_pdf, upload_pdf.getvalue(), f"Adicionando {upload_pdf.name}"):
+                        st.success("Salvo com sucesso!")
                         st.rerun()
+                
                 if arquivos_pdf:
                     arq_selecionado = st.selectbox("Apagar PDF:", arquivos_pdf)
                     if st.button("❌ Deletar Selecionado", type="primary"):
-                        if deletar_arquivo_github(f"materiais/{arq_selecionado}", f"Deletando {arq_selecionado}"):
-                            st.success("Apagado!")
+                        # Correção: Passa o caminho completo correto para a API deletar no GitHub
+                        caminho_deletar_pdf = f"materiais/{arq_selecionado}"
+                        if deletar_arquivo_github(caminho_deletar_pdf, f"Deletando {arq_selecionado}"):
+                            st.success("Apagado com sucesso!")
                             st.rerun()
+            
             with aba_video:
                 st.markdown("**Upload de Videoaulas**")
                 upload_video = st.file_uploader("Escolha o arquivo de vídeo:", type=["mp4", "mov", "avi"])
                 if upload_video is not None and st.button("Salvar Vídeo"):
-                    if enviar_arquivo_github(f"videos/{upload_video.name}", upload_video.getvalue(), f"Adicionando video {upload_video.name}"):
-                        st.success("Vídeo Salvo!")
+                    # Correção: Envia o caminho relativo correto dentro da pasta videos
+                    caminho_final_video = f"videos/{upload_video.name}"
+                    if enviar_arquivo_github(caminho_final_video, upload_video.getvalue(), f"Adicionando video {upload_video.name}"):
+                        st.success("Vídeo Salvo com sucesso!")
                         st.rerun()
+                
                 if arquivos_video:
                     vid_selecionado = st.selectbox("Apagar Vídeo:", arquivos_video)
                     if st.button("❌ Deletar Vídeo Selecionado", type="primary"):
-                        if deletar_arquivo_github(f"videos/{vid_selecionado}", f"Deletando video {vid_selecionado}"):
-                            st.success("Vídeo Apagado!")
+                        # Correção: Passa o caminho completo correto para a API deletar no GitHub
+                        caminho_deletar_video = f"videos/{vid_selecionado}"
+                        if deletar_arquivo_github(caminho_deletar_video, f"Deletando video {vid_selecionado}"):
+                            st.success("Vídeo Apagado com sucesso!")
                             st.rerun()
 # FIM DA PARTE 1
 # ==============================================================================
