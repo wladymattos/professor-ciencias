@@ -17,7 +17,9 @@ from reportlab.lib import colors
 # Configuração da página Web básica e centralizada
 st.set_page_config(page_title="Robô Professor de Ciências", page_icon="🧬", layout="centered")
 
-# Credenciais de Integração
+# Credenciais de Integração com o GitHub API
+GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", "")
+GITHUB_REPO = st.secrets.get("GITHUB_REPO", "") 
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
 
 # Pastas padrões de armazenamento local
@@ -44,6 +46,48 @@ def gerar_pdf_resposta(pergunta, resposta):
     buffer.seek(0)
     return buffer
 
+# ------------------------------------------------------------------------------
+# 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API
+# ------------------------------------------------------------------------------
+def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
+    url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}", 
+        "Accept": "application/vnd.github.v3+json"
+    }
+    
+    try:
+        r = requests.get(url, headers=headers)
+        sha = r.json().get("sha") if r.status_code == 200 else None
+        conteudo_base64 = base64.b64encode(conteudo_bytes).decode("utf-8")
+        dados = {"message": mensaje_commit, "content": conteudo_base64}
+        if sha:
+            dados["sha"] = sha
+        res = requests.put(url, headers=headers, json=dados)
+        return res.status_code in [200, 201]
+    except Exception as e:
+        st.error(f"Erro na conexão com o GitHub: {e}")
+        return False
+
+def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
+    url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}", 
+        "Accept": "application/vnd.github.v3+json"
+    }
+    
+    try:
+        r = requests.get(url, headers=headers)
+        if r.status_code == 200:
+            sha = r.json().get("sha")
+            dados = {"message": mensagem_commit, "sha": sha}
+            res = requests.delete(url, headers=headers, json=dados)
+            return res.status_code == 200
+        return False
+    except Exception as e:
+        st.error(f"Erro ao deletar no GitHub: {e}")
+        return False
+        
 def get_base64_image(image_path):
     if os.path.exists(image_path):
         with open(image_path, "rb") as img_file:
@@ -70,13 +114,11 @@ system_prompt = "Você é um robô professor de ciências didático. Responda de
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Inicializa as listas na memória persistente da sessão do Streamlit
 if "videos_memoria" not in st.session_state:
     st.session_state.videos_memoria = {}
 if "pdfs_memoria" not in st.session_state:
     st.session_state.pdfs_memoria = {}
 
-# Sincroniza os arquivos físicos existentes nas pastas locais caso existam no servidor
 try:
     for f in os.listdir(PASTA_VIDEOS):
         caminho = os.path.join(PASTA_VIDEOS, f)
@@ -101,27 +143,27 @@ with st.sidebar:
     st.markdown("### 🎥 Assistir Aulas Gravadas")
     if st.session_state.videos_memoria:
         for i, (nome_video, video_bytes) in enumerate(st.session_state.videos_memoria.items()):
-            if nome_video.endswith(('.mp4', '.mov', '.avi')):
-                st.markdown(f"**▶️ {nome_video}**")
-                try:
-                    base64_vid = base64.b64encode(video_bytes).decode("utf-8")
-                    video_url = f"data:video/mp4;base64,{base64_vid}"
-                    html_player = f'''
-                    <video width="100%" controls style="border-radius: 12px; background-color: black;">
-                        <source src="{video_url}" type="video/mp4">
-                    </video>
-                    '''
-                    st.markdown(html_player, unsafe_allow_html=True)
-                except Exception:
-                    pass
-                    
-                st.download_button(
-                    label=f"📥 Baixar Aula: {nome_video.replace('.mp4','')}", 
-                    data=video_bytes, 
-                    file_name=nome_video, 
-                    mime="video/mp4", 
-                    key=f"dl_vid_{i}"
-                )
+            st.markdown(f"**▶️ {nome_video}**")
+            try:
+                base64_vid = base64.b64encode(video_bytes).decode("utf-8")
+                video_url = f"data:video/mp4;base64,{base64_vid}"
+                html_player = f'''
+                <video width="100%" controls style="border-radius: 12px; background-color: black;">
+                    <source src="{video_url}" type="video/mp4">
+                    Seu navegador não suporta este codec. Use o botão abaixo.
+                </video>
+                '''
+                st.markdown(html_player, unsafe_allow_html=True)
+            except Exception:
+                pass
+                
+            st.download_button(
+                label=f"📥 Baixar Aula: {nome_video.replace('.mp4','')}", 
+                data=video_bytes, 
+                file_name=nome_video, 
+                mime="video/mp4", 
+                key=f"dl_vid_{i}"
+            )
     else:
         st.info("Nenhum vídeo disponível.")
 
@@ -129,14 +171,13 @@ with st.sidebar:
     st.markdown("### 📚 Materiais de Apoio")
     if st.session_state.pdfs_memoria:
         for i, (nome_arquivo, pdf_bytes) in enumerate(st.session_state.pdfs_memoria.items()):
-            if nome_arquivo.endswith('.pdf'):
-                st.download_button(
-                    label=f"📥 Baixar {nome_arquivo.replace('.pdf', '')}", 
-                    data=pdf_bytes, 
-                    file_name=nome_arquivo, 
-                    mime="application/pdf", 
-                    key=f"mat_dinamico_{i}"
-                )
+            st.download_button(
+                label=f"📥 Baixar {nome_arquivo.replace('.pdf', '')}", 
+                data=pdf_bytes, 
+                file_name=nome_arquivo, 
+                mime="application/pdf", 
+                key=f"mat_dinamico_{i}"
+            )
     else:
         st.info("Nenhum material disponível.")
 
@@ -158,15 +199,17 @@ with st.sidebar:
                 upload_pdf = st.file_uploader("Escolha o arquivo PDF:", type=["pdf"])
                 if upload_pdf is not None and st.button("Salvar PDF"):
                     conteudo_pdf = upload_pdf.getvalue()
+                    caminho_final_pdf = f"materiais/{upload_pdf.name}"
                     st.session_state.pdfs_memoria[upload_pdf.name] = conteudo_pdf
-                    with open(os.path.join(PASTA_MATERIAIS, upload_pdf.name), "wb") as f:
-                        f.write(conteudo_pdf)
+                    enviar_arquivo_github(caminho_final_pdf, conteudo_pdf, f"Adicionando {upload_pdf.name}")
                     st.success("Salvo com sucesso!")
                     st.rerun()
                 
                 if st.session_state.pdfs_memoria:
                     arq_selecionado = st.selectbox("Apagar PDF:", list(st.session_state.pdfs_memoria.keys()))
-                    if st.button("❌ Deletar Selecionado", type="primary", key="del_pdf_btn"):
+                    if st.button("❌ Deletar Selecionado", type="primary"):
+                        caminho_deletar_pdf = f"materiais/{arq_selecionado}"
+                        deletar_arquivo_github(caminho_deletar_pdf, f"Deletando {arq_selecionado}")
                         if arq_selecionado in st.session_state.pdfs_memoria:
                             del st.session_state.pdfs_memoria[arq_selecionado]
                         try:
@@ -181,15 +224,17 @@ with st.sidebar:
                 upload_video = st.file_uploader("Escolha o arquivo de vídeo:", type=["mp4", "mov", "avi"])
                 if upload_video is not None and st.button("Salvar Vídeo"):
                     conteudo_video = upload_video.getvalue()
+                    caminho_final_video = f"videos/{upload_video.name}"
                     st.session_state.videos_memoria[upload_video.name] = conteudo_video
-                    with open(os.path.join(PASTA_VIDEOS, upload_video.name), "wb") as f:
-                        f.write(conteudo_video)
+                    enviar_arquivo_github(caminho_final_video, conteudo_video, f"Adicionando video {upload_video.name}")
                     st.success("Vídeo Salvo com sucesso!")
                     st.rerun()
                 
                 if st.session_state.videos_memoria:
                     vid_selecionado = st.selectbox("Apagar Vídeo:", list(st.session_state.videos_memoria.keys()))
-                    if st.button("❌ Deletar Vídeo Selecionado", type="primary", key="del_vid_btn"):
+                    if st.button("❌ Deletar Vídeo Selecionado", type="primary"):
+                        caminho_deletar_video = f"videos/{vid_selecionado}"
+                        deletar_arquivo_github(caminho_deletar_video, f"Deletando video {vid_selecionado}")
                         if vid_selecionado in st.session_state.videos_memoria:
                             del st.session_state.videos_memoria[vid_selecionado]
                         try:
@@ -232,7 +277,7 @@ if prompt := st.chat_input("Pergunte algo sobre ciências..."):
                 contents.append(types.Content(role="user", parts=[types.Part.from_text(text=prompt)]))
 
                 response = ai_client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-3.5-flash',
                     contents=contents,
                     config=types.GenerateContentConfig(system_instruction=system_prompt),
                 )
