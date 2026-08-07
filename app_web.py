@@ -55,46 +55,40 @@ def gerar_pdf_resposta(pergunta, resposta):
     return buffer
 
 # 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API
-def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
+def listar_e_baixar_arquivos_github(pasta_repositorio):
+    """Lista os arquivos de uma pasta no GitHub e retorna um dicionário {nome: bytes}"""
     if not GITHUB_REPO or not GITHUB_TOKEN:
-        return False
-    url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
+        return {}
+    
+    url = f"https://github.com{GITHUB_REPO}/contents/{pasta_repositorio}"
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}", 
         "Accept": "application/vnd.github.v3+json"
     }
-    try:
-        r = requests.get(url, headers=headers)
-        sha = r.json().get("sha") if r.status_code == 200 else None
-        conteudo_base64 = base64.b64encode(conteudo_bytes).decode("utf-8")
-        dados = {"message": mensagem_commit, "content": conteudo_base64}
-        if sha:
-            dados["sha"] = sha
-        res = requests.put(url, headers=headers, json=dados)
-        return res.status_code in [200, 201]
-    except Exception as e:
-        st.error(f"Erro na conexão com o GitHub: {e}")
-        return False
-
-def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
-    if not GITHUB_REPO or not GITHUB_TOKEN:
-        return False
-    url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
-    headers = {
-        "Authorization": f"token {GITHUB_TOKEN}", 
-        "Accept": "application/vnd.github.v3+json"
-    }
+    
+    arquivos_carregados = {}
     try:
         r = requests.get(url, headers=headers)
         if r.status_code == 200:
-            sha = r.json().get("sha")
-            dados = {"message": mensagem_commit, "sha": sha}
-            res = requests.delete(url, headers=headers, json=dados)
-            return res.status_code == 200
-        return False
+            itens = r.json()
+            # Se for apenas um arquivo ou erro de estrutura, itens não será lista
+            if isinstance(itens, list):
+                for item in itens:
+                    if item["type"] == "file":
+                        nome_arquivo = item["name"]
+                        # Ignora arquivos ocultos como .gitkeep
+                        if nome_arquivo.startswith('.'):
+                            continue
+                        
+                        # Baixa o conteúdo bruto (raw) do arquivo
+                        download_url = item["download_url"]
+                        res_download = requests.get(download_url, headers=headers)
+                        if res_download.status_code == 200:
+                            arquivos_carregados[nome_arquivo] = res_download.content
+        return arquivos_carregados
     except Exception as e:
-        st.error(f"Erro ao deletar no GitHub: {e}")
-        return False
+        st.error(f"Erro ao sincronizar pasta {pasta_repositorio} do GitHub: {e}")
+        return {}
         
 def get_base64_image(image_path):
     if os.path.exists(image_path):
@@ -124,10 +118,15 @@ system_prompt = "Você é um robô professor de ciências didático. Responda de
 # Inicialização de estados na memória global do Streamlit
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+# Sincronização inicial com o GitHub em vez do disco local efêmero
 if "videos_memoria" not in st.session_state:
-    st.session_state.videos_memoria = {}
+    with st.spinner("Sincronizando videoaulas com o GitHub..."):
+        st.session_state.videos_memoria = listar_e_baixar_arquivos_github(PASTA_VIDEOS)
+
 if "pdfs_memoria" not in st.session_state:
-    st.session_state.pdfs_memoria = {}
+    with st.spinner("Sincronizando materiais com o GitHub..."):
+        st.session_state.pdfs_memoria = listar_e_baixar_arquivos_github(PASTA_MATERIAIS)
 
 # Leitura inicial para carregar arquivos persistidos do disco
 try:
