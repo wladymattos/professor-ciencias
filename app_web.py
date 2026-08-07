@@ -171,7 +171,7 @@ if "videos_memoria" not in st.session_state:
 if "pdfs_memoria" not in st.session_state:
     with st.spinner("Sincronizando materiais com o GitHub..."):
         st.session_state.pdfs_memoria = listar_e_baixar_arquivos_github(PASTA_MATERIAIS)
-
+        
 # ==============================================================================
 # 🧬 PARTE 2 DE 3: BARRA LATERAL DO ALUNO E PAINEL ADMINISTRATIVO (ADMIN)
 # ==============================================================================
