@@ -60,6 +60,7 @@ def listar_e_baixar_arquivos_github(pasta_repositorio):
     if not GITHUB_REPO or not GITHUB_TOKEN:
         return {}
     
+    # Limpa as barras extras para evitar url quebrada
     repo_limpo = GITHUB_REPO.strip("/")
     url = f"https://github.com{repo_limpo}/contents/{pasta_repositorio}"
     headers = {
