@@ -1,4 +1,3 @@
-
 # ==============================================================================
 # 🧬 PARTE 1 DE 3: IMPORTAÇÕES, CONFIGURAÇÕES E FUNÇÕES DE SUPORTE
 # ==============================================================================
@@ -26,7 +25,7 @@ GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", "")
 GITHUB_REPO = st.secrets.get("GITHUB_REPO", "")
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
 
-# Tratamento para garantir a URL correta da API do GitHub sem fundir domínios
+# Formata corretamente a URL da API oficial do GitHub usando seu Secret
 repo_limpo = GITHUB_REPO.strip("/")
 BASE_URL_API = f"https://github.com{repo_limpo}"
 
@@ -59,7 +58,7 @@ def gerar_pdf_resposta(pergunta, resposta):
     buffer.seek(0)
     return buffer
 
-# 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API CORRIGIDAS
+# 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API
 def listar_e_baixar_arquivos_github(pasta_repositorio):
     """Lista os arquivos de uma pasta no GitHub e retorna um dicionário {nome: bytes}"""
     if not GITHUB_REPO or not GITHUB_TOKEN:
