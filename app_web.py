@@ -22,12 +22,8 @@ st.set_page_config(page_title="Robô Professor de Ciências", page_icon="🧬", 
 
 # Credenciais de Integração com o GitHub API
 GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", "")
-GITHUB_REPO = st.secrets.get("GITHUB_REPO", "")
+GITHUB_REPO = st.secrets.get("GITHUB_REPO", "") 
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
-
-# Formata corretamente a URL da API oficial do GitHub usando seu Secret
-repo_limpo = GITHUB_REPO.strip("/")
-BASE_URL_API = f"https://github.com{repo_limpo}"
 
 # Pastas padrões de armazenamento local
 PASTA_MATERIAIS = "materiais"
@@ -59,43 +55,10 @@ def gerar_pdf_resposta(pergunta, resposta):
     return buffer
 
 # 🛠️ FUNÇÕES DE SINCRONIZAÇÃO AUTOMÁTICA COM O GITHUB VIA API
-def listar_e_baixar_arquivos_github(pasta_repositorio):
-    """Lista os arquivos de uma pasta no GitHub e retorna um dicionário {nome: bytes}"""
-    if not GITHUB_REPO or not GITHUB_TOKEN:
-        return {}
-    
-    url = f"{BASE_URL_API}/contents/{pasta_repositorio}"
-    headers = {
-        "Authorization": f"token {GITHUB_TOKEN}", 
-        "Accept": "application/vnd.github.v3+json"
-    }
-    
-    arquivos_carregados = {}
-    try:
-        r = requests.get(url, headers=headers)
-        if r.status_code == 200:
-            itens = r.json()
-            if isinstance(itens, list):
-                for item in itens:
-                    if item["type"] == "file":
-                        nome_arquivo = item["name"]
-                        if nome_arquivo.startswith('.'):
-                            continue
-                        
-                        download_url = item["download_url"]
-                        res_download = requests.get(download_url, headers=headers)
-                        if res_download.status_code == 200:
-                            arquivos_carregados[nome_arquivo] = res_download.content
-        return arquivos_carregados
-    except Exception as e:
-        st.error(f"Erro ao sincronizar pasta {pasta_repositorio} do GitHub: {e}")
-        return {}
-
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
     if not GITHUB_REPO or not GITHUB_TOKEN:
         return False
-    
-    url = f"{BASE_URL_API}/contents/{caminho_repositorio}"
+    url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}", 
         "Accept": "application/vnd.github.v3+json"
@@ -116,8 +79,7 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
 def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
     if not GITHUB_REPO or not GITHUB_TOKEN:
         return False
-    
-    url = f"{BASE_URL_API}/contents/{caminho_repositorio}"
+    url = f"https://github.com{GITHUB_REPO}/contents/{caminho_repositorio}"
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}", 
         "Accept": "application/vnd.github.v3+json"
@@ -162,16 +124,26 @@ system_prompt = "Você é um robô professor de ciências didático. Responda de
 # Inicialização de estados na memória global do Streamlit
 if "messages" not in st.session_state:
     st.session_state.messages = []
-
-# Sincronização direta com a API do GitHub (Ignora o disco rígido temporário)
 if "videos_memoria" not in st.session_state:
-    with st.spinner("Sincronizando videoaulas com o GitHub..."):
-        st.session_state.videos_memoria = listar_e_baixar_arquivos_github(PASTA_VIDEOS)
-
+    st.session_state.videos_memoria = {}
 if "pdfs_memoria" not in st.session_state:
-    with st.spinner("Sincronizando materiais com o GitHub..."):
-        st.session_state.pdfs_memoria = listar_e_baixar_arquivos_github(PASTA_MATERIAIS)
-        
+    st.session_state.pdfs_memoria = {}
+
+# Leitura inicial para carregar arquivos persistidos do disco
+try:
+    for f in os.listdir(PASTA_VIDEOS):
+        caminho = os.path.join(PASTA_VIDEOS, f)
+        if f.endswith(('.mp4', '.mov', '.avi')) and os.path.getsize(caminho) > 0 and f not in st.session_state.videos_memoria:
+            with open(caminho, "rb") as vf:
+                st.session_state.videos_memoria[f] = vf.read()
+                
+    for f in os.listdir(PASTA_MATERIAIS):
+        caminho = os.path.join(PASTA_MATERIAIS, f)
+        if f.endswith('.pdf') and os.path.getsize(caminho) > 0 and f not in st.session_state.pdfs_memoria:
+            with open(caminho, "rb") as pf:
+                st.session_state.pdfs_memoria[f] = pf.read()
+except Exception:
+    pass
 # ==============================================================================
 # 🧬 PARTE 2 DE 3: BARRA LATERAL DO ALUNO E PAINEL ADMINISTRATIVO (ADMIN)
 # ==============================================================================
