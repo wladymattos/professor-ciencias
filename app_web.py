@@ -1,3 +1,4 @@
+
 # ==============================================================================
 # 🧬 PARTE 1 DE 3: IMPORTAÇÕES, CONFIGURAÇÕES E FUNÇÕES DE SUPORTE
 # ==============================================================================
@@ -22,8 +23,12 @@ st.set_page_config(page_title="Robô Professor de Ciências", page_icon="🧬", 
 
 # Credenciais de Integração com o GitHub API
 GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", "")
-GITHUB_REPO = st.secrets.get("GITHUB_REPO", "") 
+GITHUB_REPO = st.secrets.get("GITHUB_REPO", "")
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
+
+# Tratamento para garantir a URL correta da API do GitHub sem fundir domínios
+repo_limpo = GITHUB_REPO.strip("/")
+BASE_URL_API = f"https://github.com{repo_limpo}"
 
 # Pastas padrões de armazenamento local
 PASTA_MATERIAIS = "materiais"
@@ -60,9 +65,7 @@ def listar_e_baixar_arquivos_github(pasta_repositorio):
     if not GITHUB_REPO or not GITHUB_TOKEN:
         return {}
     
-    # Limpa as barras extras para evitar url quebrada
-    repo_limpo = GITHUB_REPO.strip("/")
-    url = f"https://github.com{repo_limpo}/contents/{pasta_repositorio}"
+    url = f"{BASE_URL_API}/contents/{pasta_repositorio}"
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}", 
         "Accept": "application/vnd.github.v3+json"
@@ -92,8 +95,8 @@ def listar_e_baixar_arquivos_github(pasta_repositorio):
 def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
     if not GITHUB_REPO or not GITHUB_TOKEN:
         return False
-    repo_limpo = GITHUB_REPO.strip("/")
-    url = f"https://github.com{repo_limpo}/contents/{caminho_repositorio}"
+    
+    url = f"{BASE_URL_API}/contents/{caminho_repositorio}"
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}", 
         "Accept": "application/vnd.github.v3+json"
@@ -114,8 +117,8 @@ def enviar_arquivo_github(caminho_repositorio, conteudo_bytes, mensagem_commit):
 def deletar_arquivo_github(caminho_repositorio, mensagem_commit):
     if not GITHUB_REPO or not GITHUB_TOKEN:
         return False
-    repo_limpo = GITHUB_REPO.strip("/")
-    url = f"https://github.com{repo_limpo}/contents/{caminho_repositorio}"
+    
+    url = f"{BASE_URL_API}/contents/{caminho_repositorio}"
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}", 
         "Accept": "application/vnd.github.v3+json"
